@@ -246,3 +246,21 @@ export const getWeightChange = (userData: any) => {
 
     return { change: parseFloat(change.toFixed(1)), trend };
 };
+
+export const getWorkoutsThisWeek = (history: any[] = []): number => {
+    if (!history) return 0;
+    const now = new Date();
+    // In Iran, week starts on Saturday. getDay() has Sunday as 0.
+    const dayOfWeek = now.getDay();
+    const diff = dayOfWeek === 6 ? 0 : dayOfWeek + 1;
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - diff);
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    const workoutDatesThisWeek = history
+        .map(log => new Date(log.date))
+        .filter(date => date >= startOfWeek);
+        
+    const uniqueDays = new Set(workoutDatesThisWeek.map(date => date.toDateString()));
+    return uniqueDays.size;
+};

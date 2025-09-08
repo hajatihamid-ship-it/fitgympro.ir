@@ -576,6 +576,7 @@ export const initLandingPageListeners = () => {
         };
         sessionStorage.setItem('fitgympro_calculator_data', JSON.stringify(data));
         openModal(document.getElementById('auth-modal'));
+        switchAuthForm('signup');
     });
 
     // Initial calculation and slider track coloring
