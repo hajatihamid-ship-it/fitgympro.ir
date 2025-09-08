@@ -304,7 +304,8 @@ export const renderApp = async () => {
             // FIX: await async function renderLandingPage
             appContainer.innerHTML = await renderLandingPage() + renderAuthModal();
 // FIX: The function initLandingPageListeners expects 0 arguments.
-            initLandingPageListeners(); 
+            initLandingPageListeners();
+            initAuthListeners(handleLoginSuccess);
             window.lucide?.createIcons();
             setTimeout(() => {
                 const mainContainer = document.querySelector('.landing-page-wrapper');

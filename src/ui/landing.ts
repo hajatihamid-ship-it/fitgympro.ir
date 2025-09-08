@@ -271,13 +271,9 @@ export const renderLandingPage = async () => {
                         <button data-modal-target="contact-modal" class="landing-nav-link">تماس با ما</button>
                     </nav>
                     <div class="flex items-center gap-4">
-                        <button id="login-link-landing" class="font-semibold text-white bg-transparent border border-white/50 hover:bg-white/10 transition-colors duration-200 py-2 px-5 rounded-md flex items-center gap-2">
-                            <span>ورود</span>
+                        <button id="auth-btn-landing" class="landing-auth-btn">
                             <i data-lucide="log-in" class="w-4 h-4"></i>
-                        </button>
-                        <button id="signup-btn-landing" class="primary-button !bg-accent !text-black !py-2 !px-5 !rounded-md flex items-center gap-2">
-                            <i data-lucide="user-plus" class="w-4 h-4"></i>
-                            <span>ثبت نام رایگان</span>
+                            <span>ورود | ثبت نام</span>
                         </button>
                     </div>
                 </div>
@@ -409,65 +405,75 @@ const updateCalculatorResults = () => {
     }
 };
 
-export const initLandingPageListeners = () => {
-    // Header scroll effect
-    const header = document.querySelector('.landing-page-revert .landing-header');
-    if (header) {
-        window.addEventListener('scroll', () => {
-            if (window.scrollY > 50) {
-                header.classList.add('scrolled');
-            } else {
-                header.classList.remove('scrolled');
-            }
-        }, { passive: true });
+let headerScrollListenerAttached = false;
+
+const handleLandingPageClicks = (e: MouseEvent) => {
+    const target = e.target as HTMLElement;
+
+    // Modal Triggers
+    const modalTrigger = target.closest('[data-modal-target]');
+    if (modalTrigger) {
+        const modalId = modalTrigger.getAttribute('data-modal-target');
+        if (modalId) {
+            openModal(document.getElementById(modalId));
+        }
+        return;
     }
 
-    // --- Generic Modal and Action Handler ---
-    document.body.addEventListener('click', (e) => {
-        const target = e.target as HTMLElement;
+    // Modal Closers
+    if (target.classList.contains('modal') || target.closest('.close-modal-btn')) {
+        closeModal(target.closest('.modal'));
+        return;
+    }
 
-        // Modal Triggers
-        const modalTrigger = target.closest('[data-modal-target]');
-        if (modalTrigger) {
-            const modalId = modalTrigger.getAttribute('data-modal-target');
-            if (modalId) {
-                openModal(document.getElementById(modalId));
-            }
-            return;
-        }
-
-        // Modal Closers
-        if (target.classList.contains('modal') || target.closest('.close-modal-btn')) {
-            closeModal(target.closest('.modal'));
-            return;
-        }
-
-        // Login/Signup Buttons
-        if (target.closest('#login-link-landing')) {
+    // Auth Button
+    if (target.closest('#auth-btn-landing')) {
+        openModal(document.getElementById('auth-modal'));
+        switchAuthForm('signup'); // Always start with signup
+        return;
+    }
+    
+    // Select Plan Button
+    const selectPlanBtn = target.closest('.select-plan-btn');
+    if (selectPlanBtn) {
+        const planId = (selectPlanBtn as HTMLElement).dataset.planId;
+        if (planId) {
+            sessionStorage.setItem('fitgympro_selected_plan', planId);
+            closeModal(selectPlanBtn.closest('.modal'));
             openModal(document.getElementById('auth-modal'));
-            switchAuthForm('login');
-            return;
         }
-        if (target.closest('#signup-btn-landing')) {
-            openModal(document.getElementById('auth-modal'));
-            switchAuthForm('signup');
-            return;
-        }
-        
-        // Select Plan Button
-        const selectPlanBtn = target.closest('.select-plan-btn');
-        if (selectPlanBtn) {
-            const planId = (selectPlanBtn as HTMLElement).dataset.planId;
-            if (planId) {
-                sessionStorage.setItem('fitgympro_selected_plan', planId);
-                closeModal(selectPlanBtn.closest('.modal'));
-                openModal(document.getElementById('auth-modal'));
-            }
-            return;
-        }
-    });
+        return;
+    }
+};
 
-    // Calculator listeners
+const handleHeaderScroll = () => {
+    const header = document.querySelector('.landing-page-revert .landing-header');
+    if (header) {
+        if (window.scrollY > 50) {
+            header.classList.add('scrolled');
+        } else {
+            header.classList.remove('scrolled');
+        }
+    }
+};
+
+
+export const initLandingPageListeners = () => {
+    const root = document.getElementById('app-root');
+    if (!root) return;
+    
+    // Header scroll effect - only attach listener once
+    if (!headerScrollListenerAttached) {
+        window.addEventListener('scroll', handleHeaderScroll, { passive: true });
+        headerScrollListenerAttached = true;
+    }
+    handleHeaderScroll(); // Call once on init to set initial state
+
+    // Attach listener to the root container which gets replaced on navigation.
+    // This avoids attaching multiple listeners to document.body.
+    root.addEventListener('click', handleLandingPageClicks);
+
+    // Calculator listeners (this part is safe to re-run as elements are re-created)
     const calculator = document.getElementById('fitness-calculator');
     if (!calculator) return;
     

@@ -118,43 +118,47 @@ const addSelectedPlanToCart = async (username: string): Promise<boolean> => {
 };
 
 const checkPasswordStrength = (password: string) => {
-    const meter = document.getElementById('password-strength-meter');
-    const text = document.getElementById('password-strength-text');
-    const bar = meter?.querySelector('.strength-bar') as HTMLElement;
-    if (!meter || !text || !bar) return;
+    const container = document.getElementById('password-strength-container');
+    const bars = container?.querySelectorAll('.strength-bar-segment');
+    const textEl = document.getElementById('password-strength-text');
+    if (!bars || bars.length !== 4 || !textEl) return;
 
     let score = 0;
     if (password.length >= 8) score++;
     if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score++;
     if (/[0-9]/.test(password)) score++;
     if (/[^A-Za-z0-9]/.test(password)) score++;
-    
-    bar.className = 'strength-bar'; // Reset classes
-    text.className = ''; // Reset classes
+
+    bars.forEach(bar => bar.className = 'strength-bar-segment'); // Reset all
+    textEl.className = ''; // Reset text color
 
     if (password.length === 0) {
-        text.textContent = '';
+        textEl.textContent = '';
         return;
     }
 
     switch (score) {
-        case 0:
         case 1:
-            bar.classList.add('strength-weak');
-            text.textContent = 'ضعیف';
-            text.classList.add('text-weak');
+            bars[0].classList.add('strength-weak');
+            textEl.textContent = 'ضعیف';
+            textEl.classList.add('text-weak');
             break;
         case 2:
         case 3:
-            bar.classList.add('strength-medium');
-            text.textContent = 'متوسط';
-            text.classList.add('text-medium');
+            bars[0].classList.add('strength-medium');
+            bars[1].classList.add('strength-medium');
+            if (score === 3) bars[2].classList.add('strength-medium');
+            textEl.textContent = 'متوسط';
+            textEl.classList.add('text-medium');
             break;
         case 4:
-            bar.classList.add('strength-strong');
-            text.textContent = 'قوی';
-            text.classList.add('text-strong');
+            bars.forEach(b => b.classList.add('strength-strong'));
+            textEl.textContent = 'قوی';
+            textEl.classList.add('text-strong');
             break;
+        default: // Score 0
+            textEl.textContent = 'بسیار ضعیف';
+            textEl.classList.add('text-weak');
     }
 }
 
@@ -166,11 +170,16 @@ export function initAuthListeners(handleLoginSuccess: (username: string) => void
     const handleLoginActions = async (username: string) => {
         const calculatorDataApplied = await applyCalculatorData(username);
         const planAdded = await addSelectedPlanToCart(username);
-        if (calculatorDataApplied || planAdded) {
+        
+        // New logic: Plan has priority for redirection.
+        if (planAdded) {
             sessionStorage.setItem('fitgympro_redirect_to_tab', 'store-content');
-            if (planAdded) sessionStorage.setItem('fitgympro_open_cart', 'true');
-            if (calculatorDataApplied) sessionStorage.setItem('fromProfileSave', 'true');
+            sessionStorage.setItem('fitgympro_open_cart', 'true');
+        } else if (calculatorDataApplied) {
+            // If calculator data was applied, redirect to profile to see it
+            sessionStorage.setItem('fitgympro_redirect_to_tab', 'profile-content');
         }
+        
         handleLoginSuccess(username);
     };
 
@@ -281,8 +290,8 @@ export function initAuthListeners(handleLoginSuccess: (username: string) => void
             await handleLoginActions(username);
         } else {
             showToast("نام کاربری یا رمز عبور اشتباه است.", "error");
-            loginForm.closest('.card')?.classList.add('shake-animation');
-            setTimeout(() => loginForm.closest('.card')?.classList.remove('shake-animation'), 500);
+            loginForm.closest('.auth-form-panel')?.classList.add('shake-animation');
+            setTimeout(() => loginForm.closest('.auth-form-panel')?.classList.remove('shake-animation'), 500);
         }
     });
 
@@ -309,12 +318,6 @@ export function initAuthListeners(handleLoginSuccess: (username: string) => void
             showValidationError(usernameInput, 'نام کاربری باید حداقل ۳ کاراکتر باشد.');
             hasError = true;
         }
-
-        const allUsers = await getUsers();
-        if (allUsers.some((u: any) => u.username === username)) {
-            showValidationError(usernameInput, 'این نام کاربری قبلا استفاده شده است.');
-            hasError = true;
-        }
         if (!/^\S+@\S+\.\S+$/.test(email)) {
             showValidationError(emailInput, 'لطفا یک ایمیل معتبر وارد کنید.');
             hasError = true;
@@ -325,6 +328,20 @@ export function initAuthListeners(handleLoginSuccess: (username: string) => void
         }
 
         if (hasError) return;
+
+        const allUsers = await getUsers();
+        const existingUser = allUsers.find((u: any) => u.username.toLowerCase() === username.toLowerCase() || u.email.toLowerCase() === email.toLowerCase());
+        if (existingUser) {
+            showToast("کاربری با این مشخصات وجود دارد. لطفاً وارد شوید.", "warning");
+            switchAuthForm('login');
+            const loginUsernameInput = document.getElementById("login-username") as HTMLInputElement;
+            const loginPasswordInput = document.getElementById("login-password") as HTMLInputElement;
+            if (loginUsernameInput && loginPasswordInput) {
+                loginUsernameInput.value = existingUser.username;
+                loginPasswordInput.focus();
+            }
+            return;
+        }
         
         allUsers.push({
             username: username,
@@ -371,110 +388,128 @@ export function initAuthListeners(handleLoginSuccess: (username: string) => void
 
 export function renderAuthModal() {
     return `
-    <div id="auth-modal" class="modal fixed inset-0 bg-black/60 z-[100] hidden opacity-0 pointer-events-none transition-opacity duration-300 flex items-center justify-center p-4">
-        <div class="card w-full max-w-md transform scale-95 transition-transform duration-300 relative">
-             <button id="close-auth-modal-btn" class="absolute top-3 left-3 secondary-button !p-2 rounded-full z-10"><i data-lucide="x"></i></button>
-            <div class="p-8 pt-12 min-h-[520px] overflow-hidden relative">
+    <div id="auth-modal" class="modal fixed inset-0 bg-black/70 backdrop-blur-sm z-[100] hidden opacity-0 pointer-events-none transition-opacity duration-300 flex items-center justify-center p-4">
+        <div class="card w-full max-w-sm md:max-w-4xl transform scale-95 transition-transform duration-300 relative !p-0 overflow-hidden md:grid md:grid-cols-2">
+            <!-- Branding Panel -->
+            <div class="auth-branding-panel hidden md:flex flex-col justify-center p-12 text-center">
+                 <i data-lucide="dumbbell" class="w-16 h-16 mx-auto text-white"></i>
+                 <h2 class="text-3xl font-bold mt-4">به FitGym Pro بپیوندید</h2>
+                 <p class="mt-2 text-white/80">مسیر خود را به سوی بهترین نسخه خودتان از همین امروز شروع کنید.</p>
+            </div>
+
+            <!-- Form Panel -->
+            <div class="auth-form-panel">
+                <button id="close-auth-modal-btn" class="absolute top-3 left-3 secondary-button !p-2 rounded-full z-10"><i data-lucide="x"></i></button>
+
                 <!-- Login Form -->
-                <div id="login-form-container" class="form-container form-active">
-                    <h2 class="font-bold text-2xl text-center mb-6">خوش آمدید!</h2>
-                    <form id="login-form" class="space-y-4" novalidate>
-                        <div class="input-group">
-                            <input id="login-username" type="text" class="input-field w-full" placeholder=" " required>
-                            <label for="login-username" class="input-label">نام کاربری</label>
-                        </div>
-                        <div class="input-group relative">
-                            <input id="login-password" type="password" class="input-field w-full" placeholder=" " required>
-                            <label for="login-password" class="input-label">رمز عبور</label>
-                            <button type="button" class="password-toggle" data-target="login-password"><i data-lucide="eye" class="w-5 h-5"></i></button>
-                        </div>
-                         <div class="flex justify-between items-center text-sm pt-1">
-                            <label for="remember-me" class="custom-checkbox-label">
-                                <input type="checkbox" id="remember-me" class="custom-checkbox" checked>
-                                <span>مرا به خاطر بسپار</span>
-                            </label>
-                            <button id="switch-to-forgot-btn" type="button" class="hover:underline text-text-secondary">فراموشی رمز عبور؟</button>
-                        </div>
-                        <div class="pt-2">
-                            <button type="submit" class="primary-button w-full !py-3 !text-base">ورود</button>
-                        </div>
-                    </form>
-                     <div class="form-divider text-xs">یا</div>
-                     <button type="button" id="google-login-btn" class="google-btn">
-                        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google logo">
-                        ورود با حساب گوگل
-                    </button>
-                    <div class="text-center mt-6">
-                        <p class="text-sm text-secondary">
-                            حساب کاربری ندارید؟
+                <div id="login-form-container" class="form-container hidden p-8 md:p-10 flex flex-col justify-center">
+                    <div>
+                        <h2 class="font-bold text-2xl text-center mb-6">خوش آمدید!</h2>
+                        <form id="login-form" class="space-y-4" novalidate>
+                            <div class="input-group">
+                                <input id="login-username" type="text" class="input-field w-full" placeholder=" " required>
+                                <label for="login-username" class="input-label">نام کاربری</label>
+                            </div>
+                            <div class="input-group relative">
+                                <input id="login-password" type="password" class="input-field w-full" placeholder=" " required>
+                                <label for="login-password" class="input-label">رمز عبور</label>
+                                <button type="button" class="password-toggle" data-target="login-password"><i data-lucide="eye" class="w-5 h-5"></i></button>
+                            </div>
+                            <div class="flex justify-between items-center text-sm pt-1">
+                                <label for="remember-me" class="custom-checkbox-label">
+                                    <input type="checkbox" id="remember-me" class="custom-checkbox" checked>
+                                    <span>مرا به خاطر بسپار</span>
+                                </label>
+                                <button id="switch-to-forgot-btn" type="button" class="hover:underline text-text-secondary">فراموشی رمز عبور؟</button>
+                            </div>
+                            <div class="pt-2">
+                                <button type="submit" class="primary-button w-full !py-3 !text-base">ورود</button>
+                            </div>
+                        </form>
+                        <div class="form-divider text-xs">یا</div>
+                        <button type="button" id="google-login-btn" class="google-btn">
+                            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google logo">
+                            ورود با حساب گوگل
+                        </button>
+                        <p class="text-center text-sm text-secondary mt-6">
+                            هنوز حساب کاربری ندارید؟
                             <button id="switch-to-signup-btn" type="button" class="font-bold text-accent hover:underline">ثبت نام کنید</button>
                         </p>
                     </div>
                 </div>
                 
                 <!-- Signup Form -->
-                <div id="signup-form-container" class="form-container hidden">
-                    <h2 class="font-bold text-2xl text-center mb-6">ایجاد حساب کاربری</h2>
-                    <form id="signup-form" class="space-y-2" novalidate>
-                        <div class="input-group">
-                            <input id="signup-username" type="text" class="input-field w-full" placeholder=" " required minlength="3">
-                            <label for="signup-username" class="input-label">نام کاربری</label>
-                            <div class="validation-message"></div>
-                        </div>
-                        <div class="input-group">
-                            <input id="signup-email" type="email" class="input-field w-full" placeholder=" " required>
-                            <label for="signup-email" class="input-label">ایمیل</label>
-                            <div class="validation-message"></div>
-                        </div>
-                        <div class="input-group relative">
-                            <input id="signup-password" type="password" class="input-field w-full" placeholder=" " required minlength="6">
-                            <label for="signup-password" class="input-label">رمز عبور</label>
-                            <button type="button" class="password-toggle" data-target="signup-password"><i data-lucide="eye" class="w-5 h-5"></i></button>
-                            <div class="validation-message"></div>
-                        </div>
-                        <div id="password-strength-container">
-                            <div id="password-strength-meter">
-                                <div class="strength-bar"></div>
+                <div id="signup-form-container" class="form-container hidden p-8 md:p-10 flex flex-col justify-center">
+                    <div>
+                        <h2 class="font-bold text-2xl text-center mb-6">ایجاد حساب کاربری</h2>
+                        <form id="signup-form" class="space-y-2" novalidate>
+                            <div class="input-group">
+                                <input id="signup-username" type="text" class="input-field w-full" placeholder=" " required minlength="3">
+                                <label for="signup-username" class="input-label">نام کاربری</label>
+                                <div class="validation-message"></div>
                             </div>
-                            <p id="password-strength-text" class="text-right"></p>
-                        </div>
-                        <button type="submit" class="primary-button w-full !py-3 !text-base mt-2">ثبت نام</button>
-                    </form>
-                    <div class="form-divider text-xs">یا</div>
-                     <button type="button" id="google-signup-btn" class="google-btn">
-                        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google logo">
-                        ثبت نام با حساب گوگل
-                    </button>
-                    <p class="text-center text-sm text-secondary mt-6">
-                        قبلا ثبت نام کرده‌اید؟
-                        <button id="switch-to-login-btn" type="button" class="font-bold text-accent hover:underline">وارد شوید</button>
-                    </p>
+                            <div class="input-group">
+                                <input id="signup-email" type="email" class="input-field w-full" placeholder=" " required>
+                                <label for="signup-email" class="input-label">ایمیل</label>
+                                <div class="validation-message"></div>
+                            </div>
+                            <div class="input-group relative">
+                                <input id="signup-password" type="password" class="input-field w-full" placeholder=" " required minlength="6">
+                                <label for="signup-password" class="input-label">رمز عبور</label>
+                                <button type="button" class="password-toggle" data-target="signup-password"><i data-lucide="eye" class="w-5 h-5"></i></button>
+                                <div class="validation-message"></div>
+                            </div>
+                            <div id="password-strength-container" class="pt-1">
+                                <div id="password-strength-meter">
+                                    <div class="strength-bar-segment"></div>
+                                    <div class="strength-bar-segment"></div>
+                                    <div class="strength-bar-segment"></div>
+                                    <div class="strength-bar-segment"></div>
+                                </div>
+                                <p id="password-strength-text" class="text-right"></p>
+                            </div>
+                            <button type="submit" class="primary-button w-full !py-3 !text-base !mt-4">ثبت نام</button>
+                        </form>
+                        <div class="form-divider text-xs">یا</div>
+                        <button type="button" id="google-signup-btn" class="google-btn">
+                            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google logo">
+                            ثبت نام با حساب گوگل
+                        </button>
+                        <p class="text-center text-sm text-secondary mt-6">
+                            قبلا ثبت نام کرده‌اید؟
+                            <button id="switch-to-login-btn" type="button" class="font-bold text-accent hover:underline">وارد شوید</button>
+                        </p>
+                    </div>
                 </div>
 
                 <!-- Forgot Password Form -->
-                <div id="forgot-password-form-container" class="form-container hidden">
-                    <h2 class="font-bold text-2xl text-center mb-6">بازیابی رمز عبور</h2>
-                    <p class="text-center text-sm text-secondary mb-6">ایمیل خود را وارد کنید تا لینک بازیابی رمز عبور برایتان ارسال شود.</p>
-                    <form id="forgot-password-form" class="space-y-4" novalidate>
-                        <div class="input-group">
-                            <input id="forgot-email" type="email" class="input-field w-full" placeholder=" " required>
-                            <label for="forgot-email" class="input-label">ایمیل</label>
-                        </div>
-                        <button type="submit" class="primary-button w-full !py-3 !text-base">ارسال لینک بازیابی</button>
-                    </form>
-                    <p class="text-center text-sm text-secondary mt-6">
-                        <button id="switch-back-to-login-btn" type="button" class="font-bold text-accent hover:underline">بازگشت به صفحه ورود</button>
-                    </p>
+                <div id="forgot-password-form-container" class="form-container hidden p-8 md:p-10 flex flex-col justify-center">
+                    <div>
+                        <h2 class="font-bold text-2xl text-center mb-6">بازیابی رمز عبور</h2>
+                        <p class="text-center text-sm text-secondary mb-6">ایمیل خود را وارد کنید تا لینک بازیابی رمز عبور برایتان ارسال شود.</p>
+                        <form id="forgot-password-form" class="space-y-4" novalidate>
+                            <div class="input-group">
+                                <input id="forgot-email" type="email" class="input-field w-full" placeholder=" " required>
+                                <label for="forgot-email" class="input-label">ایمیل</label>
+                            </div>
+                            <button type="submit" class="primary-button w-full !py-3 !text-base">ارسال لینک بازیابی</button>
+                        </form>
+                        <p class="text-center text-sm text-secondary mt-6">
+                            <button id="switch-back-to-login-btn" type="button" class="font-bold text-accent hover:underline">بازگشت به صفحه ورود</button>
+                        </p>
+                    </div>
                 </div>
                 
                 <!-- Forgot Password Confirmation -->
-                <div id="forgot-password-confirmation" class="form-container hidden text-center">
-                    <div class="icon-container">
-                        <i data-lucide="mail-check" class="w-8 h-8"></i>
+                <div id="forgot-password-confirmation" class="form-container hidden text-center p-8 md:p-10 flex flex-col justify-center">
+                    <div>
+                        <div class="icon-container">
+                            <i data-lucide="mail-check" class="w-8 h-8"></i>
+                        </div>
+                        <h2 class="font-bold text-xl text-center mb-2">ایمیل ارسال شد!</h2>
+                        <p class="text-center text-sm text-secondary mb-6">اگر حساب کاربری با این ایمیل وجود داشته باشد، لینک بازیابی برایتان ارسال شد. لطفاً صندوق ورودی و اسپم خود را بررسی کنید.</p>
+                        <button id="switch-back-to-login-btn-2" type="button" class="primary-button w-full">بازگشت به ورود</button>
                     </div>
-                    <h2 class="font-bold text-xl text-center mb-2">ایمیل ارسال شد!</h2>
-                    <p class="text-center text-sm text-secondary mb-6">اگر حساب کاربری با این ایمیل وجود داشته باشد، لینک بازیابی برایتان ارسال شد. لطفاً صندوق ورودی و اسپم خود را بررسی کنید.</p>
-                    <button id="switch-back-to-login-btn-2" type="button" class="primary-button w-full">بازگشت به ورود</button>
                 </div>
             </div>
         </div>

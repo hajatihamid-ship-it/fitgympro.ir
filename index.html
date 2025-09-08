@@ -245,8 +245,20 @@
         .input-field:focus { outline: none; border-color: var(--accent); background-color: var(--bg-secondary); box-shadow: 0 0 0 3px var(--accent-transparent-20); }
         .input-error { border-color: var(--red-accent) !important; }
 
-        .primary-button { background-color: var(--accent); color: #1a202c; font-weight: 700; padding: 0.8rem 1.5rem; border-radius: var(--radius-btn); transition: all 0.2s; }
-        .primary-button:hover:not(:disabled) { background-color: var(--accent-hover); transform: translateY(-2px); }
+        .primary-button { 
+            background-image: linear-gradient(to top, var(--accent) 0%, color-mix(in srgb, var(--accent) 80%, white) 100%);
+            color: #1a202c; 
+            font-weight: 700; 
+            padding: 0.8rem 1.5rem; 
+            border-radius: var(--radius-btn); 
+            transition: all 0.2s; 
+            border: none;
+            box-shadow: 0 2px 4px var(--accent-transparent-30);
+        }
+        .primary-button:hover:not(:disabled) { 
+            transform: translateY(-2px); 
+            box-shadow: 0 4px 10px var(--accent-transparent-30);
+        }
         .primary-button:disabled { opacity: 0.6; cursor: not-allowed; }
         
         .secondary-button { background-color: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-primary); font-weight: 600; padding: 0.8rem 1.5rem; border-radius: var(--radius-btn); transition: all 0.2s; }
@@ -469,61 +481,63 @@
         }
 
 
-        /* Auth Modal */
+        /* --- NEW Auth Modal Styles --- */
+        .auth-branding-panel {
+            background-color: color-mix(in srgb, var(--accent) 80%, black);
+            color: white;
+        }
+        .auth-form-panel {
+            min-height: 580px;
+            position: relative;
+            overflow: hidden;
+        }
+
         .form-container {
             transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
             position: absolute;
-            top: 4.5rem;
-            left: 2rem;
-            right: 2rem;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
         }
         .form-container.hidden {
             opacity: 0;
             pointer-events: none;
-            transform: translateX(20px);
+            transform: scale(0.98);
         }
         .form-container.form-active {
             opacity: 1;
             pointer-events: auto;
-            transform: translateX(0);
-            position: relative;
-            top: auto;
-            left: auto;
-            right: auto;
+            transform: scale(1);
         }
         .form-container.is-switching-out {
-            transform: translateX(-20px);
+            transform: scale(0.98);
             opacity: 0;
         }
 
         /* Password Strength Meter */
-        #password-strength-container {
-            margin-top: -0.25rem;
-            padding: 0 0.25rem;
-            height: 1.5rem;
-        }
         #password-strength-meter {
-            display: flex;
-            gap: 0.25rem;
-            height: 6px;
-            border-radius: 3px;
-            overflow: hidden;
-            background-color: var(--bg-tertiary);
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.5rem;
+            height: 8px;
         }
-        #password-strength-meter .strength-bar {
+        .strength-bar-segment {
             height: 100%;
-            width: 0;
-            border-radius: 3px;
-            transition: width 0.3s ease, background-color 0.3s ease;
+            border-radius: 4px;
+            background-color: var(--bg-tertiary);
+            transition: background-color 0.3s ease;
         }
+        .strength-bar-segment.strength-weak { background-color: var(--red-accent); }
+        .strength-bar-segment.strength-medium { background-color: var(--admin-accent-yellow); }
+        .strength-bar-segment.strength-strong { background-color: var(--admin-accent-green); }
+
         #password-strength-text {
             font-size: 0.75rem;
             font-weight: 600;
             margin-top: 0.25rem;
+            height: 1rem;
         }
-        .strength-weak { background-color: var(--red-accent); width: 33.33%; }
-        .strength-medium { background-color: var(--admin-accent-yellow); width: 66.66%; }
-        .strength-strong { background-color: var(--admin-accent-green); width: 100%; }
         .text-weak { color: var(--red-accent); }
         .text-medium { color: var(--admin-accent-yellow); }
         .text-strong { color: var(--admin-accent-green); }
@@ -1431,6 +1445,26 @@
            display: -webkit-box;
            -webkit-box-orient: vertical;
            -webkit-line-clamp: 3;
+        }
+
+        .landing-auth-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background-color: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+            font-weight: 600;
+            padding: 0.625rem 1.25rem;
+            border-radius: 0.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.2s ease-in-out;
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+        }
+        .landing-auth-btn:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
         }
 
         /* --- User Dashboard Nav Colors --- */

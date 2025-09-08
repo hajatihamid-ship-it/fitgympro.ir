@@ -1262,21 +1262,19 @@ export async function initUserDashboard(currentUser: string, userData: any, hand
     
     const defaultTab = mainContainer.querySelector<HTMLElement>('.coach-nav-link');
     if (defaultTab) {
-        if (sessionStorage.getItem('fitgympro_redirect_to_tab') === 'store-content') {
-            const storeTab = mainContainer.querySelector<HTMLElement>('.coach-nav-link[data-target="store-content"]');
-            await switchTab(storeTab || defaultTab);
+        const redirectToTab = sessionStorage.getItem('fitgympro_redirect_to_tab');
+        if (redirectToTab) {
+            const tabToSwitch = mainContainer.querySelector<HTMLElement>(`.coach-nav-link[data-target="${redirectToTab}"]`);
+            await switchTab(tabToSwitch || defaultTab);
             sessionStorage.removeItem('fitgympro_redirect_to_tab');
-             if (sessionStorage.getItem('fitgympro_open_cart') === 'true') {
+            
+            if (sessionStorage.getItem('fitgympro_open_cart') === 'true') {
                 setTimeout(async () => {
                     await renderCartModalContentAndBadge(currentUser);
                     openModal(document.getElementById('cart-modal'));
                     sessionStorage.removeItem('fitgympro_open_cart');
                 }, 100);
             }
-        } else if (sessionStorage.getItem('fromProfileSave') === 'true') {
-            const profileTab = mainContainer.querySelector<HTMLElement>('.coach-nav-link[data-target="profile-content"]');
-            await switchTab(profileTab || defaultTab);
-            sessionStorage.removeItem('fromProfileSave');
         } else {
             await switchTab(defaultTab);
         }
