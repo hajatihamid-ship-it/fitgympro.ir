@@ -14,12 +14,16 @@ export const switchAuthForm = (formToShow: 'login' | 'signup' | 'forgot-password
 
     let activeContainer: HTMLElement | null = null;
 
+    // Find the currently active container to determine if it's an initial open or a switch
     Object.values(containers).forEach(container => {
         if (container && container.classList.contains('form-active')) {
             activeContainer = container;
         }
     });
 
+    const isInitialOpen = !activeContainer;
+
+    // Hide the currently active container if we are switching
     if (activeContainer) {
         activeContainer.classList.remove('form-active');
         activeContainer.classList.add('is-switching-out');
@@ -29,16 +33,30 @@ export const switchAuthForm = (formToShow: 'login' | 'signup' | 'forgot-password
         }, { once: true });
     }
 
+    // Show the new container
     const newContainer = containers[formToShow];
     if (newContainer) {
-        setTimeout(() => {
+        // If it's the first form being shown, do it instantly without transition delay
+        if (isInitialOpen) {
+            // Ensure no other forms are accidentally active
+            Object.values(containers).forEach(c => {
+                if (c) c.classList.remove('form-active');
+            });
+
             newContainer.classList.remove('hidden');
-            // Force reflow to ensure transition is applied
-            void newContainer.offsetWidth; 
             newContainer.classList.add('form-active');
-        }, activeContainer ? 150 : 0);
+        } else {
+            // If we are switching, use a timeout to allow the old form to transition out
+            setTimeout(() => {
+                newContainer.classList.remove('hidden');
+                // Force reflow to ensure transition is applied correctly
+                void newContainer.offsetWidth; 
+                newContainer.classList.add('form-active');
+            }, 150);
+        }
     }
 };
+
 
 const showValidationError = (inputEl: HTMLInputElement, message: string) => {
     const group = inputEl.closest('.input-group');

@@ -435,7 +435,7 @@ const handleLandingPageClicks = (e: MouseEvent) => {
     // Auth Button
     if (target.closest('#auth-btn-landing')) {
         openModal(document.getElementById('auth-modal'));
-        switchAuthForm('signup'); // Always start with signup
+        switchAuthForm('login'); // Default to login form for better UX
         return;
     }
     
