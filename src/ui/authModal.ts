@@ -388,6 +388,13 @@ export function renderAuthModal() {
                             <label for="login-password" class="input-label">رمز عبور</label>
                             <button type="button" class="password-toggle" data-target="login-password"><i data-lucide="eye" class="w-5 h-5"></i></button>
                         </div>
+                         <div class="flex justify-between items-center text-sm pt-1">
+                            <label for="remember-me" class="custom-checkbox-label">
+                                <input type="checkbox" id="remember-me" class="custom-checkbox" checked>
+                                <span>مرا به خاطر بسپار</span>
+                            </label>
+                            <button id="switch-to-forgot-btn" type="button" class="hover:underline text-text-secondary">فراموشی رمز عبور؟</button>
+                        </div>
                         <div class="pt-2">
                             <button type="submit" class="primary-button w-full !py-3 !text-base">ورود</button>
                         </div>
@@ -401,9 +408,6 @@ export function renderAuthModal() {
                         <p class="text-sm text-secondary">
                             حساب کاربری ندارید؟
                             <button id="switch-to-signup-btn" type="button" class="font-bold text-accent hover:underline">ثبت نام کنید</button>
-                        </p>
-                        <p class="text-sm text-secondary mt-2">
-                             <button id="switch-to-forgot-btn" type="button" class="hover:underline">فراموشی رمز عبور؟</button>
                         </p>
                     </div>
                 </div>

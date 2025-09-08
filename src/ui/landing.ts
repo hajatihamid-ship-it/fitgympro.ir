@@ -271,8 +271,14 @@ export const renderLandingPage = async () => {
                         <button data-modal-target="contact-modal" class="landing-nav-link">تماس با ما</button>
                     </nav>
                     <div class="flex items-center gap-4">
-                        <button id="login-link-landing" class="landing-nav-link !font-semibold text-white">ورود</button>
-                        <button id="signup-btn-landing" class="primary-button !bg-accent !text-black !py-2 !px-5 !rounded-md">ثبت نام رایگان</button>
+                        <button id="login-link-landing" class="font-semibold text-white bg-transparent border border-white/50 hover:bg-white/10 transition-colors duration-200 py-2 px-5 rounded-md flex items-center gap-2">
+                            <span>ورود</span>
+                            <i data-lucide="log-in" class="w-4 h-4"></i>
+                        </button>
+                        <button id="signup-btn-landing" class="primary-button !bg-accent !text-black !py-2 !px-5 !rounded-md flex items-center gap-2">
+                            <i data-lucide="user-plus" class="w-4 h-4"></i>
+                            <span>ثبت نام رایگان</span>
+                        </button>
                     </div>
                 </div>
             </header>
