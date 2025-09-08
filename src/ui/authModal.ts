@@ -389,20 +389,13 @@ export function initAuthListeners(handleLoginSuccess: (username: string) => void
 export function renderAuthModal() {
     return `
     <div id="auth-modal" class="modal fixed inset-0 bg-black/70 backdrop-blur-sm z-[100] hidden opacity-0 pointer-events-none transition-opacity duration-300 flex items-center justify-center p-4">
-        <div class="card w-full max-w-sm md:max-w-4xl transform scale-95 transition-transform duration-300 relative !p-0 overflow-hidden md:grid md:grid-cols-2">
-            <!-- Branding Panel -->
-            <div class="auth-branding-panel hidden md:flex flex-col justify-center p-12 text-center">
-                 <i data-lucide="dumbbell" class="w-16 h-16 mx-auto text-white"></i>
-                 <h2 class="text-3xl font-bold mt-4">به FitGym Pro بپیوندید</h2>
-                 <p class="mt-2 text-white/80">مسیر خود را به سوی بهترین نسخه خودتان از همین امروز شروع کنید.</p>
-            </div>
-
+        <div class="card w-full max-w-md transform scale-95 transition-transform duration-300 !p-0">
             <!-- Form Panel -->
             <div class="auth-form-panel">
                 <button id="close-auth-modal-btn" class="absolute top-3 left-3 secondary-button !p-2 rounded-full z-10"><i data-lucide="x"></i></button>
 
                 <!-- Login Form -->
-                <div id="login-form-container" class="form-container hidden p-8 md:p-10 flex flex-col justify-center">
+                <div id="login-form-container" class="form-container hidden">
                     <div>
                         <h2 class="font-bold text-2xl text-center mb-6">خوش آمدید!</h2>
                         <form id="login-form" class="space-y-4" novalidate>
@@ -439,7 +432,7 @@ export function renderAuthModal() {
                 </div>
                 
                 <!-- Signup Form -->
-                <div id="signup-form-container" class="form-container hidden p-8 md:p-10 flex flex-col justify-center">
+                <div id="signup-form-container" class="form-container hidden">
                     <div>
                         <h2 class="font-bold text-2xl text-center mb-6">ایجاد حساب کاربری</h2>
                         <form id="signup-form" class="space-y-2" novalidate>
@@ -483,7 +476,7 @@ export function renderAuthModal() {
                 </div>
 
                 <!-- Forgot Password Form -->
-                <div id="forgot-password-form-container" class="form-container hidden p-8 md:p-10 flex flex-col justify-center">
+                <div id="forgot-password-form-container" class="form-container hidden">
                     <div>
                         <h2 class="font-bold text-2xl text-center mb-6">بازیابی رمز عبور</h2>
                         <p class="text-center text-sm text-secondary mb-6">ایمیل خود را وارد کنید تا لینک بازیابی رمز عبور برایتان ارسال شود.</p>
@@ -501,7 +494,7 @@ export function renderAuthModal() {
                 </div>
                 
                 <!-- Forgot Password Confirmation -->
-                <div id="forgot-password-confirmation" class="form-container hidden text-center p-8 md:p-10 flex flex-col justify-center">
+                <div id="forgot-password-confirmation" class="form-container hidden text-center">
                     <div>
                         <div class="icon-container">
                             <i data-lucide="mail-check" class="w-8 h-8"></i>

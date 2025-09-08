@@ -282,7 +282,7 @@ export const renderLandingPage = async () => {
                 <section class="hero-section text-white text-center">
                      <div class="container mx-auto px-4">
                         <h1 class="text-4xl lg:text-6xl font-extrabold leading-tight animate-fade-in-down">
-                           بدن ایده‌آل خود را با fitgympro بسازید
+                           بدن ایده‌آل خود را با FitGym Pro بسازید
                         </h1>
                         <p class="mt-6 text-lg text-white/70 max-w-2xl mx-auto animate-fade-in-up animation-delay-200">
                            دیگر نیازی به حدس و خطا نیست. ما با تحلیل دقیق اطلاعات شما، بهترین برنامه تمرینی و غذایی را برایتان طراحی می‌کنیم.
