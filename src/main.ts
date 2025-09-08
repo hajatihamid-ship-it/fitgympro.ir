@@ -7,7 +7,6 @@ import { renderAdminDashboard, initAdminDashboard } from './ui/adminDashboard';
 import { getUsers, getUserData, saveUsers, saveUserData, addActivityLog, saveDiscounts, getStorePlans, saveStorePlans, seedCMSData, getSiteSettings, idbSet, idbGet, idbDel } from './services/storage';
 import { setCurrentUser, getCurrentUser } from './state';
 import { sanitizeHTML, applySiteSettings } from './utils/dom';
-import { STORE_PLANS as APP_STORE_PLANS } from './config';
 
 let notificationInterval: number | null = null;
 let themeListenerAttached = false;

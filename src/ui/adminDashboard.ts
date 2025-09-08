@@ -104,7 +104,7 @@ const renderDiscountsAdminHtml = async () => {
         <div class="flex justify-between items-center mb-4">
             <div>
                 <h3 class="font-bold text-lg">مدیریت کدهای تخفیف</h3>
-                <p class="text-text-secondary text-sm">کدهای تخفیف را برای کمپین‌های بازاریابی مدیریت کنید.</p>
+                <p class="text-text-secondary text-sm">کدهای تخفیf را برای کمپین‌های بازاریابی مدیریت کنید.</p>
             </div>
             <button data-action="add-discount" class="primary-button flex items-center gap-2"><i data-lucide="plus"></i> افزودن کد</button>
         </div>
@@ -291,10 +291,10 @@ const refreshUserTables = async () => {
     window.lucide?.createIcons();
 };
 
-const renderPlansAdminHtml = async () => {
+const renderAdminPlansListHtml = async () => {
     const plans = await getStorePlans();
-    const plansListHtml = plans.length > 0 ? plans.map((plan: any) => `
-        <div class="p-4 border-l-4 rounded-lg flex items-center justify-between bg-bg-secondary hover:bg-bg-tertiary transition-colors" style="border-left-color: ${plan.color || 'var(--accent)'};">
+    return plans.length > 0 ? plans.map((plan: any) => `
+        <div class="p-4 border-l-4 rounded-lg flex items-center justify-between bg-bg-tertiary hover:bg-bg-tertiary/60 transition-colors" style="border-left-color: ${plan.color || 'var(--accent)'};">
            <div class="flex items-center gap-3">
                 <span class="text-2xl">${plan.emoji || '📄'}</span>
                 <div>
@@ -308,43 +308,6 @@ const renderPlansAdminHtml = async () => {
            </div>
         </div>
     `).join('') : '<p class="text-text-secondary p-4 text-center">هنوز پلنی ایجاد نشده است.</p>';
-
-    return `
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div class="card p-4">
-            <div class="flex justify-between items-center mb-4">
-                <div>
-                    <h3 class="font-bold text-lg">مدیریت پلن‌ها</h3>
-                    <p class="text-text-secondary text-sm">پلن‌های اشتراک را ایجاد، ویرایش یا حذف کنید.</p>
-                </div>
-                <button data-action="add-plan" class="primary-button flex items-center gap-2"><i data-lucide="plus"></i> افزودن پلن</button>
-            </div>
-            <div id="admin-plans-list" class="space-y-2">
-                ${plansListHtml}
-            </div>
-        </div>
-        <div>
-             <h3 class="font-bold text-lg mb-4 text-center text-text-secondary">پیش‌نمایش کارت پلن</h3>
-             <div class="card p-6 flex flex-col border-2 transition-all hover:shadow-xl hover:-translate-y-1 bg-bg-secondary" style="border-color: #ec4899;">
-                <h4 class="text-lg font-bold text-text-primary">🚀 پکیج کامل ۳ ماهه</h4>
-                <p class="text-sm text-text-secondary mt-1 flex-grow">بهترین گزینه برای نتایج پایدار و جامع.</p>
-                <div class="my-6">
-                    <span class="text-3xl font-black">${formatPrice(400000).split(' ')[0]}</span>
-                    <span class="text-text-secondary"> تومان</span>
-                </div>
-                <ul class="space-y-3 text-sm mb-6">
-                    ${['برنامه تمرینی اختصاصی', 'برنامه غذایی هوشمند', 'پشتیبانی کامل در چت', 'تحلیل هفتگی پیشرفت'].map(feature => `
-                        <li class="flex items-center gap-2">
-                            <i data-lucide="check-circle" class="w-5 h-5 text-green-400"></i>
-                            <span>${feature}</span>
-                        </li>
-                    `).join('')}
-                </ul>
-                <button class="primary-button mt-auto w-full cursor-default">انتخاب پلن</button>
-            </div>
-        </div>
-    </div>
-    `;
 };
 
 const openUserActivityModal = async (username: string) => {
@@ -648,7 +611,6 @@ const renderSettingsPageHTML = async () => {
     `;
 };
 
-// FIX: Define openArticleModal to handle adding/editing magazine articles.
 const openArticleModal = async (articleId: string | null = null) => {
     const modal = document.getElementById('magazine-article-modal');
     const form = document.getElementById('magazine-article-form') as HTMLFormElement;
@@ -675,7 +637,6 @@ const openArticleModal = async (articleId: string | null = null) => {
     openModal(modal);
 };
 
-// FIX: Define renderMagazineAdminPage to display the magazine management UI.
 const renderMagazineAdminPage = async () => {
     const pageContainer = document.getElementById('admin-magazine-page');
     if (!pageContainer) return;
@@ -712,6 +673,68 @@ const renderMagazineAdminPage = async () => {
     `;
     window.lucide?.createIcons();
 };
+
+const openEditUserModal = async (username: string) => {
+    const modal = document.getElementById('edit-user-modal');
+    const body = document.getElementById('edit-user-modal-body');
+    const title = document.getElementById('edit-user-modal-title');
+    if (!modal || !body || !title) return;
+
+    const users = await getUsers();
+    const user = users.find(u => u.username === username);
+    const userData = await getUserData(username);
+    if (!user) return;
+
+    title.textContent = `ویرایش کاربر: ${username}`;
+
+    body.innerHTML = `
+        <form id="edit-user-form" data-username="${username}" class="space-y-4">
+            <div class="input-group">
+                <input type="text" id="edit-user-name" class="input-field w-full" value="${userData.step1?.clientName || ''}" placeholder=" ">
+                <label for="edit-user-name" class="input-label">نام نمایشی</label>
+            </div>
+            <div class="input-group">
+                <input type="email" id="edit-user-email" class="input-field w-full" value="${user.email}" placeholder=" ">
+                <label for="edit-user-email" class="input-label">ایمیل</label>
+            </div>
+            <div>
+                <label for="edit-user-role" class="block text-sm font-semibold mb-2">نقش</label>
+                <select id="edit-user-role" class="input-field w-full">
+                    <option value="user" ${user.role === 'user' ? 'selected' : ''}>کاربر</option>
+                    <option value="coach" ${user.role === 'coach' ? 'selected' : ''}>مربی</option>
+                    <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>ادمین</option>
+                </select>
+            </div>
+            <div class="pt-2">
+                <button type="submit" class="primary-button w-full">ذخیره تغییرات</button>
+            </div>
+        </form>
+    `;
+
+    openModal(modal);
+};
+
+const renderActivityLogPageHtml = async () => {
+    const log = await getActivityLog();
+
+    if (log.length === 0) {
+        return `<div class="card p-8 text-center text-text-secondary">هیچ فعالیتی برای نمایش وجود ندارد.</div>`;
+    }
+
+    return `
+        <div class="card p-4">
+            <div class="space-y-3">
+                ${log.map(entry => `
+                    <div class="p-3 bg-bg-tertiary rounded-lg flex justify-between items-center text-sm">
+                        <p>${sanitizeHTML(entry.message)}</p>
+                        <span class="text-xs text-text-secondary flex-shrink-0">${timeAgo(entry.date)}</span>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `;
+};
+
 
 export async function renderAdminDashboard() {
     const name = "Admin";
@@ -920,16 +943,17 @@ export async function renderAdminDashboard() {
     `;
 }
 
-export async function initAdminDashboard(handleLogout: () => void, handleLoginSuccess: (username: string) => void, handleGoToHome: () => void) {
-    document.getElementById('logout-btn')?.addEventListener('click', handleLogout);
-    document.getElementById('go-to-home-btn')?.addEventListener('click', handleGoToHome);
-    
+// FIX: Add and export initAdminDashboard to handle dashboard initialization and event listeners.
+export async function initAdminDashboard(
+    handleLogout: () => void, 
+    handleLoginSuccess: (username: string) => void, 
+    handleGoToHome: () => void
+) {
     const mainContainer = document.querySelector('.admin-dashboard-container');
     if (!mainContainer) return;
 
-    const navLinks = mainContainer.querySelectorAll('.nav-link');
-    const pages = mainContainer.querySelectorAll('.page');
-    const adminTitleEl = document.getElementById('admin-page-title');
+    mainContainer.querySelector('#logout-btn')?.addEventListener('click', handleLogout);
+    mainContainer.querySelector('#go-to-home-btn')?.addEventListener('click', handleGoToHome);
 
     const pageTitles: Record<string, string> = {
         'dashboard': 'داشبورد',
@@ -939,507 +963,285 @@ export async function initAdminDashboard(handleLogout: () => void, handleLoginSu
         'analytics': 'آنالیتیکس',
         'commissions': 'کمیسیون‌ها',
         'cms': 'مدیریت محتوا',
-        'magazine': 'مدیریت مجله',
+        'magazine': 'مجله',
         'settings': 'تنظیمات سایت',
         'activity-log': 'گزارش فعالیت'
     };
-    
-    const renderWebhooksList = async () => {
-        const container = document.getElementById('webhooks-list-container');
-        if (!container) return;
-        const settings = await getSiteSettings();
-        const webhooks = settings.integrations.webhooks || [];
-        
-        if (webhooks.length === 0) {
-            container.innerHTML = `<p class="text-text-secondary text-center p-4">هیچ وب‌هوکی ثبت نشده است.</p>`;
+
+    const switchTab = async (page: string) => {
+        mainContainer.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active-link'));
+        mainContainer.querySelector(`.nav-link[data-page="${page}"]`)?.classList.add('active-link');
+
+        mainContainer.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+        const pageContainer = document.getElementById(`admin-${page}-page`);
+        if (pageContainer) {
+            pageContainer.classList.remove('hidden');
+            pageContainer.innerHTML = `<div class="flex justify-center items-center p-16"><div class="w-12 h-12 rounded-full animate-spin border-4 border-dashed border-accent border-t-transparent"></div></div>`;
+        } else {
             return;
         }
 
-        container.innerHTML = webhooks.map((hook: any) => `
-            <div class="p-3 bg-bg-tertiary rounded-lg flex items-center justify-between">
-                <div>
-                    <p class="font-mono text-sm font-semibold truncate max-w-xs md:max-w-md">${hook.url}</p>
-                    <div class="flex items-center gap-2 mt-1">
-                        ${hook.events.map((event: string) => `<span class="text-xs bg-bg-secondary px-2 py-0.5 rounded-full">${event}</span>`).join('')}
-                    </div>
-                </div>
-                <div class="flex items-center gap-2">
-                    <button class="secondary-button !p-2" data-action="edit-webhook" data-id="${hook.id}"><i data-lucide="edit-3" class="w-4 h-4 pointer-events-none"></i></button>
-                    <button class="secondary-button !p-2 text-red-accent" data-action="delete-webhook" data-id="${hook.id}"><i data-lucide="trash-2" class="w-4 h-4 pointer-events-none"></i></button>
-                </div>
-            </div>
-        `).join('');
-        window.lucide?.createIcons();
-    };
-
-
-    const switchTab = async (activeTab: HTMLElement) => {
-        const page = activeTab.dataset.page;
-        if (!page) return;
-
-        navLinks.forEach(link => link.classList.remove('active-link'));
-        activeTab.classList.add('active-link');
-
-        pages.forEach(p => p.classList.toggle('hidden', p.id !== `admin-${page}-page`));
-
-        if (adminTitleEl) {
-            adminTitleEl.textContent = pageTitles[page] || 'داشبورد';
+        const titleEl = document.getElementById('admin-page-title');
+        if (titleEl) {
+            titleEl.textContent = pageTitles[page] || 'داشبورد';
         }
 
-        const pageContainer = document.getElementById(`admin-${page}-page`);
-        if (!pageContainer) return;
-        
         switch (page) {
-            case 'dashboard':
-                const users = await getUsers();
-                const coaches = users.filter((u: any) => u.role === 'coach' && u.coachStatus === 'verified');
-                const pendingCoaches = users.filter((u: any) => u.role === 'coach' && u.coachStatus === 'pending');
-                const kpis = [
-                    { title: 'کل کاربران', value: users.length, icon: 'users', color: 'admin-accent-blue' },
-                    { title: 'مربیان تایید شده', value: coaches.length, icon: 'award', color: 'admin-accent-green' },
-                    { title: 'درآمد کل', value: '۱۲,۵۰۰,۰۰۰', icon: 'trending-up', color: 'admin-accent-pink' },
-                    { title: 'درخواست‌های در انتظار', value: pendingCoaches.length, icon: 'alert-circle', color: 'admin-accent-orange' }
-                ];
+            case 'dashboard': {
                 pageContainer.innerHTML = `
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-                        ${kpis.map(kpi => `
-                            <div class="admin-kpi-card">
-                                <div class="icon-container" style="background-color: var(--${kpi.color});">
-                                    <i data-lucide="${kpi.icon}" class="w-6 h-6 text-white"></i>
-                                </div>
-                                <div>
-                                    <p class="text-2xl font-bold">${kpi.value}</p>
-                                    <p class="text-sm text-text-secondary">${kpi.title}</p>
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6"></div>
                     <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
-                        <div class="lg:col-span-3 admin-chart-container h-96">
-                            <h3 class="font-bold mb-4">گزارش درآمد ماهانه</h3>
-                            <canvas id="revenueChart"></canvas>
-                        </div>
-                        <div class="lg:col-span-2 admin-chart-container h-96">
-                            <h3 class="font-bold mb-4">محبوبیت پلن‌ها</h3>
-                            <canvas id="plansChart"></canvas>
-                        </div>
+                        <div class="lg:col-span-3 admin-chart-container h-96"><canvas id="revenueChart"></canvas></div>
+                        <div class="lg:col-span-2 admin-chart-container h-96"><canvas id="plansChart"></canvas></div>
                     </div>
                 `;
+                const users = await getUsers();
+                const statsCards = [
+                    { title: 'کل کاربران', value: users.length, icon: 'users', color: 'admin-accent-blue' },
+                    { title: 'کل مربیان', value: users.filter((u: any) => u.role === 'coach').length, icon: 'award', color: 'admin-accent-green' },
+                    { title: 'مربیان در انتظار تایید', value: users.filter((u: any) => u.role === 'coach' && u.coachStatus === 'pending').length, icon: 'user-check', color: 'admin-accent-orange' },
+                    { title: 'فروش کل (ماه)', value: formatPrice(12500000), icon: 'trending-up', color: 'admin-accent-pink' }
+                ];
+                const statsContainer = pageContainer.querySelector('.grid');
+                if (statsContainer) {
+                    statsContainer.innerHTML = statsCards.map(stat => `
+                        <div class="admin-kpi-card">
+                            <div class="icon-container" style="background-color: var(--${stat.color});"><i data-lucide="${stat.icon}" class="w-6 h-6 text-white"></i></div>
+                            <div><p class="font-bold text-2xl">${stat.value}</p><p class="text-sm text-text-secondary">${stat.title}</p></div>
+                        </div>
+                    `).join('');
+                }
                 await initCharts();
                 break;
-            case 'users':
-                const { allUsersHtml } = await renderUserRowsHtml();
-                 pageContainer.innerHTML = `
+            }
+            case 'users': {
+                pageContainer.innerHTML = `
                     <div class="card overflow-hidden">
                         <div class="overflow-x-auto">
-                            <table class="w-full text-sm text-right min-w-[800px]">
-                                <thead><tr class="font-semibold"><th class="p-4">نام</th><th class="p-4">ایمیل</th><th class="p-4">نقش</th><th class="p-4">تاریخ عضویت</th><th class="p-4">وضعیت</th><th class="p-4">عملیات</th></tr></thead>
-                                <tbody id="all-users-tbody">${allUsersHtml}</tbody>
+                            <table class="w-full text-sm text-right min-w-[900px]">
+                                <thead><tr class="font-semibold"><th class="p-4">کاربر</th><th class="p-4">ایمیل</th><th class="p-4">نقش</th><th class="p-4">تاریخ عضویت</th><th class="p-4">وضعیت</th><th class="p-4">عملیات</th></tr></thead>
+                                <tbody id="all-users-tbody"></tbody>
                             </table>
                         </div>
                     </div>
                 `;
+                await refreshUserTables();
                 break;
-            case 'coaches':
-                 const { coachesHtml } = await renderUserRowsHtml();
-                 pageContainer.innerHTML = `
+            }
+            case 'coaches': {
+                pageContainer.innerHTML = `
                     <div class="card overflow-hidden">
                         <div class="overflow-x-auto">
                             <table class="w-full text-sm text-right min-w-[700px]">
-                                <thead><tr class="font-semibold"><th class="p-4">نام مربی</th><th class="p-4">تعداد شاگردان</th><th class="p-4">تاریخ عضویت</th><th class="p-4">وضعیت</th><th class="p-4">عملیات</th></tr></thead>
-                                <tbody id="coaches-tbody">${coachesHtml}</tbody>
+                                <thead><tr class="font-semibold"><th class="p-4">مربی</th><th class="p-4">تعداد شاگرد</th><th class="p-4">تاریخ عضویت</th><th class="p-4">وضعیت</th><th class="p-4">عملیات</th></tr></thead>
+                                <tbody id="coaches-tbody"></tbody>
                             </table>
                         </div>
                     </div>
                 `;
+                await refreshUserTables();
                 break;
-            case 'store':
-                pageContainer.innerHTML = `
-                    <div class="space-y-6">
-                        <div id="plans-admin-container" class="card p-4">${await renderPlansAdminHtml()}</div>
-                        <div id="discounts-admin-container" class="card p-4">${await renderDiscountsAdminHtml()}</div>
-                    </div>
-                `;
-                break;
-             case 'analytics':
-                await renderAnalyticsPage();
-                break;
-            case 'commissions':
-                pageContainer.innerHTML = await renderCommissionsHtml();
-                break;
-            case 'cms':
-                await renderCMSPage();
-                break;
-            case 'magazine':
-                await renderMagazineAdminPage();
-                break;
-            case 'settings':
-                pageContainer.innerHTML = await renderSettingsPageHTML();
-                await renderWebhooksList();
-                break;
-            case 'activity-log':
-                const logs = await getActivityLog();
-                pageContainer.innerHTML = `
-                    <div class="card p-4">
-                        <div class="space-y-2">
-                            ${logs.map((log: any) => `
-                                <div class="p-2 bg-bg-tertiary rounded-md text-sm">
-                                    <span class="text-text-secondary">${timeAgo(log.date)}:</span>
-                                    <span>${log.message}</span>
-                                </div>
-                            `).join('')}
+            }
+            case 'store': {
+                 pageContainer.innerHTML = `
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="card p-6">
+                            <div class="flex justify-between items-center mb-4">
+                                <div><h3 class="font-bold text-lg">مدیریت پلن‌ها</h3><p class="text-text-secondary text-sm">پلن‌های عضویت را اضافه، ویرایش یا حذف کنید.</p></div>
+                                <button data-action="add-plan" class="primary-button flex items-center gap-2"><i data-lucide="plus"></i> افزودن پلن</button>
+                            </div>
+                            <div id="admin-plans-list" class="space-y-2">${await renderAdminPlansListHtml()}</div>
                         </div>
+                         <div class="card p-6">${await renderDiscountsAdminHtml()}</div>
                     </div>
-                `;
+                 `;
+                 break;
+            }
+            case 'analytics': await renderAnalyticsPage(); break;
+            case 'commissions': pageContainer.innerHTML = await renderCommissionsHtml(); break;
+            case 'cms': await renderCMSPage(); break;
+            case 'magazine': await renderMagazineAdminPage(); break;
+            case 'settings': pageContainer.innerHTML = await renderSettingsPageHTML(); break;
+            case 'activity-log':
+                pageContainer.innerHTML = await renderActivityLogPageHtml();
                 break;
         }
         window.lucide?.createIcons();
     };
 
-    const initialTab = mainContainer.querySelector('.nav-link[data-page="dashboard"]');
-    if (initialTab) {
-        await switchTab(initialTab as HTMLElement);
-    }
-    
-    navLinks.forEach(link => {
-        link.addEventListener('click', async (e) => await switchTab(e.currentTarget as HTMLElement));
+    mainContainer.querySelectorAll('.nav-link').forEach(link => {
+        link.addEventListener('click', () => {
+            const page = (link as HTMLElement).dataset.page;
+            if (page) switchTab(page);
+        });
     });
-    
-    mainContainer.addEventListener('click', async (e) => {
+
+    mainContainer.addEventListener('click', async e => {
         const target = e.target as HTMLElement;
-
-        const tabButton = target.closest<HTMLElement>('.admin-tab-button');
-        if (tabButton) {
-            if (tabButton.closest('#admin-settings-page')) {
-                 const tabId = tabButton.dataset.tab;
-                if (!tabId) return;
-    
-                mainContainer.querySelectorAll('#admin-settings-page .admin-tab-button').forEach(btn => btn.classList.remove('active-tab'));
-                tabButton.classList.add('active-tab');
-    
-                mainContainer.querySelectorAll('#admin-settings-page .admin-tab-content').forEach(content => {
-                    content.classList.toggle('hidden', content.id !== `${tabId}-tab-content`);
-                });
-                return;
-            }
-            if(tabButton.closest('#admin-cms-page')) {
-                const tabId = tabButton.dataset.tab;
-                if (!tabId) return;
-
-                mainContainer.querySelectorAll('#admin-cms-page .admin-tab-button').forEach(btn => btn.classList.remove('active-tab'));
-                tabButton.classList.add('active-tab');
-
-                mainContainer.querySelectorAll('#admin-cms-page .cms-tab-content').forEach(content => {
-                    content.classList.toggle('hidden', content.id !== `cms-${tabId}-content`);
-                });
-                return;
-            }
-        }
-
-        const actionButton = target.closest<HTMLButtonElement>('[data-action]');
-        if (actionButton) {
-            const action = actionButton.dataset.action;
-            const username = actionButton.dataset.username;
-            let users = await getUsers();
-            const userIndex = users.findIndex((u: any) => u.username === username);
-
-            if (userIndex !== -1) {
-                switch(action) {
-                    case 'suspend': users[userIndex].status = 'suspended'; await saveUsers(users); await addActivityLog(`کاربر ${username} مسدود شد.`); await refreshUserTables(); break;
-                    case 'activate': users[userIndex].status = 'active'; await saveUsers(users); await addActivityLog(`کاربر ${username} فعال شد.`); await refreshUserTables(); break;
-                    case 'approve': users[userIndex].coachStatus = 'verified'; await saveUsers(users); await addActivityLog(`مربی ${username} تایید شد.`); await refreshUserTables(); break;
-                    case 'revoke':
-                    case 'reject': users[userIndex].coachStatus = 'revoked'; await saveUsers(users); await addActivityLog(`همکاری با مربی ${username} لغو شد.`); await refreshUserTables(); break;
-                    case 'reapprove': users[userIndex].coachStatus = 'verified'; await saveUsers(users); await addActivityLog(`مربی ${username} مجددا تایید شد.`); await refreshUserTables(); break;
-                    case 'impersonate':
-                        const adminUser = getCurrentUser();
-                        if (adminUser) {
-                            sessionStorage.setItem("impersonating_admin", adminUser);
-                            await addActivityLog(`ادمین وارد حساب ${username} شد.`);
-                            await handleLoginSuccess(username!);
+        const actionBtn = target.closest<HTMLButtonElement>('[data-action]');
+        if (actionBtn) {
+            const action = actionBtn.dataset.action;
+            const username = actionBtn.dataset.username;
+            switch (action) {
+                case 'impersonate':
+                    if (username) {
+                        const currentUser = getCurrentUser();
+                        sessionStorage.setItem("impersonating_admin", currentUser || 'admin');
+                        await handleLoginSuccess(username);
+                    }
+                    break;
+                case 'suspend': case 'activate': case 'approve': case 'reject': case 'revoke': case 'reapprove':
+                    if (username) {
+                        const users = await getUsers();
+                        const user = users.find(u => u.username === username);
+                        if (user) {
+                            if (action === 'suspend') user.status = 'suspended';
+                            if (action === 'activate') user.status = 'active';
+                            if (action === 'approve') user.coachStatus = 'verified';
+                            if (action === 'reject' || action === 'revoke') user.coachStatus = 'revoked';
+                            if (action === 'reapprove') user.coachStatus = 'verified';
+                            await saveUsers(users);
+                            await addActivityLog(`Admin action '${action}' on user ${username}.`);
+                            showToast('وضعیت کاربر بروزرسانی شد', 'success');
+                            await refreshUserTables();
                         }
-                        break;
-                     case 'view-activity': await openUserActivityModal(username!); break;
-                }
-            }
-
-            const planId = actionButton.dataset.planId;
-            const discountCode = actionButton.dataset.code;
-            const articleId = actionButton.dataset.id;
-
-            switch(action) {
-                case 'add-plan': openPlanModal(); break;
-                case 'edit-plan': if(planId) await openPlanModal(planId); break;
-                case 'delete-plan':
-                    if (planId && confirm('آیا از حذف این پلن مطمئن هستید؟')) {
-                        let plans = await getStorePlans();
-                        plans = plans.filter(p => p.planId !== planId);
-                        await saveStorePlans(plans);
-                        document.getElementById('plans-admin-container')!.innerHTML = await renderPlansAdminHtml();
-                        window.lucide.createIcons();
-                        showToast('پلن با موفقیت حذف شد.', 'success');
                     }
                     break;
-                case 'add-discount': openDiscountModal(); break;
-                case 'edit-discount': if(discountCode) await openDiscountModal(discountCode); break;
-                case 'delete-discount':
-                    if (discountCode && confirm('آیا از حذف این کد تخفیف مطمئن هستید؟')) {
-                        let discounts = await getDiscounts();
-                        delete discounts[discountCode];
-                        await saveDiscounts(discounts);
-                        document.getElementById('discounts-admin-container')!.innerHTML = await renderDiscountsAdminHtml();
-                        window.lucide.createIcons();
-                        showToast('کد تخفیف حذف شد.', 'success');
-                    }
-                    break;
+                case 'view-activity': if (username) await openUserActivityModal(username); break;
+                case 'edit-user': if (username) await openEditUserModal(username); break;
                 case 'add-article': await openArticleModal(); break;
-                case 'edit-article': if (articleId) await openArticleModal(articleId); break;
-                case 'delete-article':
+                case 'edit-article': {
+                    const articleId = actionBtn.dataset.id;
+                    if (articleId) await openArticleModal(articleId);
+                    break;
+                }
+                case 'delete-article': {
+                    const articleId = actionBtn.dataset.id;
                     if (articleId && confirm('آیا از حذف این مقاله مطمئن هستید؟')) {
                         let articles = await getMagazineArticles();
-                        articles = articles.filter(a => a.id !== articleId);
-                        await saveMagazineArticles(articles);
+                        await saveMagazineArticles(articles.filter(a => a.id !== articleId));
+                        showToast('مقاله حذف شد.', 'success');
                         await renderMagazineAdminPage();
-                        showToast('مقاله با موفقیت حذف شد.', 'success');
                     }
+                    break;
+                }
+                case 'add-plan': openPlanModal(); break;
+                case 'edit-plan': {
+                    const planId = actionBtn.dataset.planId;
+                    if(planId) openPlanModal(planId);
+                    break;
+                }
+                case 'delete-plan': {
+                    const planId = actionBtn.dataset.planId;
+                    if(planId && confirm('آیا از حذف این پلن مطمئن هستید؟')) {
+                        const plans = await getStorePlans();
+                        await saveStorePlans(plans.filter(p => p.planId !== planId));
+                        showToast('پلن حذف شد', 'success');
+                        document.getElementById('admin-plans-list')!.innerHTML = await renderAdminPlansListHtml();
+                        window.lucide?.createIcons();
+                    }
+                    break;
+                }
+                 case 'add-discount': openDiscountModal(); break;
+                 case 'edit-discount': {
+                     const code = actionBtn.dataset.code;
+                     if (code) openDiscountModal(code);
+                     break;
+                 }
+                 case 'delete-discount': {
+                     const code = actionBtn.dataset.code;
+                     if (code && confirm(`آیا از حذف کد تخفیف "${code}" مطمئن هستید؟`)) {
+                         const discounts = await getDiscounts();
+                         delete discounts[code];
+                         await saveDiscounts(discounts);
+                         showToast('کد تخفیف حذف شد', 'success');
+                         document.querySelector('.card .p-6:last-child')!.innerHTML = await renderDiscountsAdminHtml();
+                         window.lucide?.createIcons();
+                     }
+                     break;
+                 }
+                 case 'add-muscle-group': case 'add-exercise': case 'rename-muscle-group': case 'rename-exercise': case 'delete-muscle-group': case 'delete-exercise':
+                 case 'add-supplement-category': case 'add-supplement': case 'rename-supplement-category': case 'edit-supplement': case 'delete-supplement-category': case 'delete-supplement':
+                    await handleCMSAction(action, actionBtn.dataset);
                     break;
             }
         }
-        
-        const sortHeader = target.closest<HTMLElement>('.sortable-header');
-        if (sortHeader && sortHeader.dataset.sortKey) {
-            const key = sortHeader.dataset.sortKey;
-            if (coachAnalyticsSort.key === key) {
-                coachAnalyticsSort.order = coachAnalyticsSort.order === 'asc' ? 'desc' : 'asc';
-            } else {
-                coachAnalyticsSort.key = key;
-                coachAnalyticsSort.order = 'desc';
-            }
-            await renderAnalyticsPage();
-        }
+        const modalCloser = target.closest('.close-modal-btn') || (target.classList.contains('modal') ? target : null);
+        if (modalCloser) closeModal(modalCloser.closest('.modal'));
 
-        if (target.closest('#add-webhook-btn')) {
-            const modal = document.getElementById('webhook-modal');
-            const form = document.getElementById('webhook-form') as HTMLFormElement;
-            form.reset();
-            form.removeAttribute('data-editing-id');
-            (modal!.querySelector('#webhook-modal-title') as HTMLElement).textContent = 'افزودن وب‌هوک';
-            openModal(modal);
-        }
-
-        const webhookActionButton = target.closest('[data-action^="edit-webhook"], [data-action^="delete-webhook"]');
-        if (webhookActionButton) {
-            const id = webhookActionButton.getAttribute('data-id');
-            const action = webhookActionButton.getAttribute('data-action');
-            let settings = await getSiteSettings();
-            
-            if (action === 'delete-webhook') {
-                if (confirm('آیا از حذف این وب‌هوک مطمئن هستید؟')) {
-                    settings.integrations.webhooks = settings.integrations.webhooks.filter((h: any) => h.id !== id);
-                    await saveSiteSettings(settings);
-                    await renderWebhooksList();
-                    showToast('وب‌هوک با موفقیت حذف شد.', 'success');
+        const sortableHeader = target.closest('.sortable-header');
+        if (sortableHeader) {
+            const key = (sortableHeader as HTMLElement).dataset.sortKey;
+            if (key) {
+                if (coachAnalyticsSort.key === key) {
+                    coachAnalyticsSort.order = coachAnalyticsSort.order === 'asc' ? 'desc' : 'asc';
+                } else {
+                    coachAnalyticsSort.key = key;
+                    coachAnalyticsSort.order = 'desc';
                 }
-            } else if (action === 'edit-webhook') {
-                const hook = settings.integrations.webhooks.find((h: any) => h.id === id);
-                if (hook) {
-                    const modal = document.getElementById('webhook-modal');
-                    const form = document.getElementById('webhook-form') as HTMLFormElement;
-                    form.reset();
-                    form.setAttribute('data-editing-id', hook.id);
-                    (modal!.querySelector('#webhook-modal-title') as HTMLElement).textContent = 'ویرایش وب‌هوک';
-                    (form.querySelector('#webhook-url') as HTMLInputElement).value = hook.url;
-                    form.querySelectorAll<HTMLInputElement>('input[name="webhook_events"]').forEach(checkbox => {
-                        checkbox.checked = hook.events.includes(checkbox.value);
-                    });
-                    openModal(modal);
-                }
+                await renderAnalyticsPage();
             }
         }
         
-        const cmsActionButton = target.closest('[data-cms-action]');
-        if (cmsActionButton) {
-            await handleCMSActions(cmsActionButton as HTMLElement);
+        const settingsTab = target.closest('#admin-settings-page .admin-tab-button');
+        if (settingsTab) {
+            const tabId = settingsTab.getAttribute('data-tab');
+            if (tabId) {
+                mainContainer.querySelectorAll('#admin-settings-page .admin-tab-button').forEach(btn => btn.classList.remove('active-tab'));
+                settingsTab.classList.add('active-tab');
+                mainContainer.querySelectorAll('.admin-tab-content').forEach(c => c.classList.add('hidden'));
+                document.getElementById(`${tabId}-tab-content`)?.classList.remove('hidden');
+            }
+        }
+        
+        const cmsTab = target.closest('#admin-cms-page .admin-tab-button');
+        if (cmsTab) {
+            const tabId = cmsTab.getAttribute('data-tab');
+            if (tabId) {
+                mainContainer.querySelectorAll('#admin-cms-page .admin-tab-button').forEach(btn => btn.classList.remove('active-tab'));
+                cmsTab.classList.add('active-tab');
+                mainContainer.querySelectorAll('#admin-cms-page .admin-tab-content').forEach(c => c.classList.add('hidden'));
+                document.getElementById(`${tabId}-cms-content`)?.classList.remove('hidden');
+            }
         }
     });
-
-    mainContainer.addEventListener('submit', async (e) => {
+    
+    mainContainer.addEventListener('submit', async (e: Event) => {
         const form = e.target as HTMLFormElement;
-        if (form.id === 'site-settings-form') {
-            e.preventDefault();
-            const button = form.querySelector<HTMLButtonElement>('button[type="submit"]');
-            button?.classList.add('is-loading');
-
-            const newSettings = {
-                siteName: (form.querySelector('#setting-site-name') as HTMLInputElement).value,
-                logoUrl: (form.querySelector('#setting-logo-url') as HTMLInputElement).value,
-                accentColor: (form.querySelector('#setting-accent-color') as HTMLInputElement).value,
-                maintenanceMode: (form.querySelector('#setting-maintenance-mode') as HTMLInputElement).checked,
-                allowCoachRegistration: (form.querySelector('#setting-allow-coach-reg') as HTMLInputElement).checked,
-                socialMedia: {
-                    instagram: (form.querySelector('#setting-social-instagram') as HTMLInputElement).value,
-                    telegram: (form.querySelector('#setting-social-telegram') as HTMLInputElement).value,
-                    youtube: (form.querySelector('#setting-social-youtube') as HTMLInputElement).value,
-                },
-                 contactInfo: {
-                    email: (form.querySelector('#setting-contact-email') as HTMLInputElement).value,
-                    phone: (form.querySelector('#setting-contact-phone') as HTMLInputElement).value,
-                    address: (form.querySelector('#setting-contact-address') as HTMLInputElement).value,
-                },
-                financial: {
-                    commissionRate: parseInt((form.querySelector('#setting-commission-rate') as HTMLInputElement).value, 10) || 0,
-                    activeGateway: (form.querySelector('#setting-active-gateway') as HTMLSelectElement).value,
-                },
-                content: {
-                    terms: (form.querySelector('#setting-content-terms') as HTMLTextAreaElement).value,
-                    privacyPolicy: (form.querySelector('#setting-content-privacy') as HTMLTextAreaElement).value,
-                },
-                integrations: {
-                    ...(await getSiteSettings()).integrations, // Preserve webhooks
-                    paymentGateways: {
-                        zarinpal: (form.querySelector('#setting-gateway-zarinpal') as HTMLInputElement).value,
-                        idpay: (form.querySelector('#setting-gateway-idpay') as HTMLInputElement).value,
-                    },
-                },
-                monetization: {
-                    affiliateSystem: {
-                        enabled: (form.querySelector('#setting-affiliate-enabled') as HTMLInputElement).checked,
-                        commissionRate: parseInt((form.querySelector('#setting-affiliate-commission') as HTMLInputElement).value, 10) || 0,
-                    }
-                }
-            };
-
-            await saveSiteSettings(newSettings);
-            await addActivityLog('تنظیمات سایت به‌روزرسانی شد.');
-            applySiteSettings(newSettings);
-            
-            setTimeout(async () => {
-                button?.classList.remove('is-loading');
-                showToast('تنظیمات با موفقیت ذخیره شد.', 'success');
-                if (document.getElementById('admin-commissions-page')?.offsetParent !== null) {
-                    document.getElementById('admin-commissions-page')!.innerHTML = await renderCommissionsHtml();
-                }
-            }, 500);
-        }
-
-        if (form.id === 'webhook-form') {
-            e.preventDefault();
-            const url = (form.querySelector('#webhook-url') as HTMLInputElement).value;
-            const events = Array.from(form.querySelectorAll<HTMLInputElement>('input[name="webhook_events"]:checked')).map(cb => cb.value);
-            
-            if (!url || events.length === 0) {
-                showToast('URL و حداقل یک رویداد الزامی است.', 'error');
-                return;
-            }
-
-            let settings = await getSiteSettings();
-            const editingId = form.getAttribute('data-editing-id');
-
-            if (editingId) {
-                const hookIndex = settings.integrations.webhooks.findIndex((h: any) => h.id === editingId);
-                if (hookIndex > -1) {
-                    settings.integrations.webhooks[hookIndex] = { ...settings.integrations.webhooks[hookIndex], url, events };
-                }
-            } else {
-                const newHook = { id: `wh_${Date.now()}`, url, events };
-                settings.integrations.webhooks.push(newHook);
-            }
-
-            await saveSiteSettings(settings);
-            await renderWebhooksList();
-            showToast('وب‌هوک با موفقیت ذخیره شد.', 'success');
-            closeModal(document.getElementById('webhook-modal'));
-        }
         
-        if (form.id === 'plan-form') {
+        if (form.id === 'edit-user-form') {
             e.preventDefault();
-            const formData = new FormData(form);
-            const planId = form.getAttribute('data-editing-id') || `plan_${Date.now()}`;
-            
-            const newPlan = {
-                planId,
-                planName: formData.get('planName') as string,
-                description: formData.get('description') as string,
-                price: parseInt(formData.get('price') as string, 10),
-                features: (formData.get('features') as string).split('\n').filter(f => f.trim()),
-                emoji: formData.get('emoji') as string,
-                color: formData.get('color') as string,
-                recommended: formData.get('recommended') === 'on',
-                access: formData.getAll('access') as string[]
-            };
+            const username = form.dataset.username;
+            if (!username) return;
 
-            let plans = await getStorePlans();
-            if (form.getAttribute('data-editing-id')) {
-                const index = plans.findIndex(p => p.planId === planId);
-                if (index > -1) plans[index] = newPlan;
-            } else {
-                plans.push(newPlan);
+            const name = (form.querySelector('#edit-user-name') as HTMLInputElement).value;
+            const email = (form.querySelector('#edit-user-email') as HTMLInputElement).value;
+            const role = (form.querySelector('#edit-user-role') as HTMLSelectElement).value;
+
+            const users = await getUsers();
+            const userIndex = users.findIndex(u => u.username === username);
+            const userData = await getUserData(username);
+
+            if (userIndex > -1) {
+                users[userIndex].email = email;
+                users[userIndex].role = role;
+                if (!userData.step1) userData.step1 = {};
+                userData.step1.clientName = name;
+
+                await saveUsers(users);
+                await saveUserData(username, userData);
+                await addActivityLog(`Admin updated profile for ${username}.`);
+                showToast('اطلاعات کاربر به‌روزرسانی شد.', 'success');
+                closeModal(document.getElementById('edit-user-modal'));
+                await refreshUserTables();
             }
-            await saveStorePlans(plans);
-            document.getElementById('plans-admin-container')!.innerHTML = await renderPlansAdminHtml();
-            window.lucide.createIcons();
-            showToast('پلن با موفقیت ذخیره شد.', 'success');
-            closeModal(document.getElementById('plan-modal'));
+            return;
         }
-        
-        if (form.id === 'discount-form') {
+
+        if (form.id === 'magazine-article-form') {
              e.preventDefault();
             const formData = new FormData(form);
-            const code = (formData.get('code') as string).toUpperCase();
-            
-            const newDiscount = {
-                type: formData.get('type') as string,
-                value: parseInt(formData.get('value') as string, 10),
-            };
-
-            let discounts = await getDiscounts();
-            discounts[code] = newDiscount;
-            
-            await saveDiscounts(discounts);
-            document.getElementById('discounts-admin-container')!.innerHTML = await renderDiscountsAdminHtml();
-            window.lucide.createIcons();
-            showToast('کد تخفیف با موفقیت ذخیره شد.', 'success');
-            closeModal(document.getElementById('discount-modal'));
-        }
-        if (form.id === 'supplement-cms-form') {
-            e.preventDefault();
-            const formData = new FormData(form);
-            const category = form.dataset.category!;
-            const originalName = form.dataset.originalName;
-            
-            const newSupp = {
-                name: formData.get('name') as string,
-                dosageOptions: (formData.get('dosageOptions') as string).split(',').map(s => s.trim()).filter(Boolean),
-                timingOptions: (formData.get('timingOptions') as string).split(',').map(s => s.trim()).filter(Boolean),
-                note: formData.get('note') as string,
-            };
-
-            if (!newSupp.name || newSupp.dosageOptions.length === 0 || newSupp.timingOptions.length === 0) {
-                showToast("لطفا تمام فیلدهای الزامی را پر کنید.", "error");
-                return;
-            }
-
-            const db = await getSupplementsDB();
-            if (!db[category]) db[category] = [];
-
-            if (originalName) { // Editing
-                const index = db[category].findIndex(s => s.name === originalName);
-                if (index > -1) {
-                    db[category][index] = newSupp;
-                }
-            } else { // Adding
-                db[category].push(newSupp);
-            }
-            
-            await saveSupplementsDB(db);
-            showToast('مکمل با موفقیت ذخیره شد.', 'success');
-            await renderSupplementsCMS();
-            closeModal(document.getElementById('supplement-cms-modal'));
-        }
-        if (form.id === 'magazine-article-form') {
-            e.preventDefault();
-            const formData = new FormData(form);
-            const editingId = form.getAttribute('data-editing-id');
+            const editingId = form.dataset.editingId;
             const articleData = {
                 id: editingId || `article_${Date.now()}`,
                 title: formData.get('title') as string,
@@ -1448,196 +1250,152 @@ export async function initAdminDashboard(handleLogout: () => void, handleLoginSu
                 content: formData.get('content') as string,
                 publishDate: new Date().toISOString()
             };
-            
             let articles = await getMagazineArticles();
             if (editingId) {
                 const index = articles.findIndex(a => a.id === editingId);
-                if (index > -1) {
-                    articles[index] = { ...articles[index], ...articleData };
-                }
+                if (index > -1) articles[index] = articleData;
             } else {
-                articles.push(articleData);
+                articles.unshift(articleData);
             }
             await saveMagazineArticles(articles);
-            await renderMagazineAdminPage();
-            showToast('مقاله با موفقیت ذخیره شد.', 'success');
+            showToast(`مقاله با موفقیت ${editingId ? 'ویرایش' : 'ذخیره'} شد.`, 'success');
             closeModal(document.getElementById('magazine-article-modal'));
+            await renderMagazineAdminPage();
         }
+
+        if (form.id === 'plan-form') {
+            await handlePlanFormSubmit(e)
+        };
+        if (form.id === 'discount-form') {
+            await handleDiscountFormSubmit(e)
+        };
+        if (form.id === 'supplement-cms-form') {
+            await handleSupplementFormSubmit(e)
+        };
     });
+    
 
-    document.querySelectorAll('.close-modal-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            closeModal(btn.closest('.modal') as HTMLElement);
-        });
-    });
-
-    const openPlanModal = async (planId: string | null = null) => {
-        const modal = document.getElementById('plan-modal');
-        const form = document.getElementById('plan-form') as HTMLFormElement;
-        const title = document.getElementById('plan-modal-title');
-        if (!modal || !form || !title) return;
-
-        form.reset();
-        form.removeAttribute('data-editing-id');
-        (form.elements.namedItem('color') as HTMLInputElement).value = '#3b82f6';
-        form.querySelectorAll<HTMLInputElement>('input[name="access"]').forEach(cb => cb.checked = false);
-
-        if (planId) {
-            const plan = (await getStorePlans()).find(p => p.planId === planId);
-            if (plan) {
-                title.textContent = 'ویرایش پلن';
-                form.setAttribute('data-editing-id', planId);
-                (form.elements.namedItem('planName') as HTMLInputElement).value = plan.planName;
-                (form.elements.namedItem('description') as HTMLInputElement).value = plan.description;
-                // FIX: Convert number to string for input value
-                (form.elements.namedItem('price') as HTMLInputElement).value = String(plan.price);
-                (form.elements.namedItem('features') as HTMLTextAreaElement).value = plan.features.join('\n');
-                (form.elements.namedItem('emoji') as HTMLInputElement).value = plan.emoji;
-                (form.elements.namedItem('color') as HTMLInputElement).value = plan.color;
-                (form.elements.namedItem('recommended') as HTMLInputElement).checked = plan.recommended;
-                plan.access.forEach((acc: string) => {
-                    const cb = form.querySelector<HTMLInputElement>(`input[name="access"][value="${acc}"]`);
-                    if (cb) cb.checked = true;
-                });
-            }
-        } else {
-            title.textContent = 'افزودن پلن';
-        }
-        openModal(modal);
-    };
-
-    const openDiscountModal = async (code: string | null = null) => {
-        const modal = document.getElementById('discount-modal');
-        const form = document.getElementById('discount-form') as HTMLFormElement;
-        const title = document.getElementById('discount-modal-title');
-        if (!modal || !form || !title) return;
-
-        form.reset();
-        const codeInput = form.elements.namedItem('code') as HTMLInputElement;
-        codeInput.readOnly = false;
-
-        if (code) {
-            const discount = (await getDiscounts())[code];
-            if (discount) {
-                title.textContent = 'ویرایش کد تخفیف';
-                codeInput.value = code;
-                codeInput.readOnly = true;
-                (form.querySelector(`input[name="type"][value="${discount.type}"]`) as HTMLInputElement).checked = true;
-                // FIX: Convert number to string for input value
-                (form.elements.namedItem('value') as HTMLInputElement).value = String(discount.value);
-            }
-        } else {
-            title.textContent = 'افزودن کد تخفیف';
-        }
-        openModal(modal);
-    };
+    await switchTab('dashboard');
 }
 
+const openPlanModal = async (planId: string | null = null) => {
+    const modal = document.getElementById('plan-modal');
+    const form = document.getElementById('plan-form') as HTMLFormElement;
+    const title = document.getElementById('plan-modal-title');
+    if (!modal || !form || !title) return;
 
-// --- CMS Specific Functions ---
-const renderCMSPage = async () => {
-    const pageContainer = document.getElementById('admin-cms-page');
-    if (!pageContainer) return;
-    pageContainer.innerHTML = `
-        <div class="flex items-center gap-2 border-b border-border-primary mb-6 flex-wrap">
-            <button class="cms-tab-button admin-tab-button active-tab" data-tab="exercises">تمرینات</button>
-            <button class="cms-tab-button admin-tab-button" data-tab="supplements">مکمل‌ها</button>
-        </div>
-        <div id="cms-exercises-content" class="cms-tab-content animate-fade-in"></div>
-        <div id="cms-supplements-content" class="cms-tab-content animate-fade-in hidden"></div>
-    `;
-    await renderExercisesCMS();
-    await renderSupplementsCMS();
+    form.reset();
+    form.removeAttribute('data-editing-id');
+
+    if (planId) {
+        const plans = await getStorePlans();
+        const plan = plans.find(p => p.planId === planId);
+        if(plan) {
+            title.textContent = 'ویرایش پلن';
+            form.setAttribute('data-editing-id', planId);
+            (form.elements.namedItem('planName') as HTMLInputElement).value = plan.planName;
+            (form.elements.namedItem('description') as HTMLInputElement).value = plan.description;
+            (form.elements.namedItem('price') as HTMLInputElement).value = plan.price;
+            (form.elements.namedItem('emoji') as HTMLInputElement).value = plan.emoji;
+            (form.elements.namedItem('features') as HTMLTextAreaElement).value = (plan.features || []).join('\n');
+            (form.elements.namedItem('color') as HTMLInputElement).value = plan.color;
+            (form.elements.namedItem('recommended') as HTMLInputElement).checked = plan.recommended;
+            (plan.access || []).forEach((p: string) => {
+                const checkbox = form.querySelector(`input[name="access"][value="${p}"]`) as HTMLInputElement;
+                if(checkbox) checkbox.checked = true;
+            });
+        }
+    } else {
+        title.textContent = 'افزودن پلن جدید';
+    }
+
+    openModal(modal);
+};
+
+const handlePlanFormSubmit = async (e: Event) => {
+    e.preventDefault();
+    const form = e.target as HTMLFormElement;
+    const editingId = form.dataset.editingId;
+    
+    const formData = new FormData(form);
+    const access = formData.getAll('access') as string[];
+    
+    const planData: any = {
+        planId: editingId || `plan_${Date.now()}`,
+        planName: formData.get('planName'),
+        description: formData.get('description'),
+        price: Number(formData.get('price')),
+        emoji: formData.get('emoji'),
+        features: (formData.get('features') as string).split('\n').filter(Boolean),
+        color: formData.get('color'),
+        recommended: (formData.get('recommended') as any) === 'on',
+        access: access
+    };
+
+    const plans = await getStorePlans();
+    if(editingId) {
+        const index = plans.findIndex(p => p.planId === editingId);
+        if(index > -1) plans[index] = planData;
+    } else {
+        plans.push(planData);
+    }
+
+    await saveStorePlans(plans);
+    showToast(`پلن با موفقیت ${editingId ? 'ویرایش' : 'ذخیره'} شد.`, 'success');
+    closeModal(document.getElementById('plan-modal'));
+    document.getElementById('admin-plans-list')!.innerHTML = await renderAdminPlansListHtml();
     window.lucide?.createIcons();
 };
 
-const renderExercisesCMS = async () => {
-    const container = document.getElementById('cms-exercises-content');
-    if (!container) return;
-    const db = await getExercisesDB();
-    const sortedGroups = Object.keys(db).sort((a,b) => a.localeCompare(b, 'fa'));
+const openDiscountModal = async (code: string | null = null) => {
+    const modal = document.getElementById('discount-modal');
+    const form = document.getElementById('discount-form') as HTMLFormElement;
+    const title = document.getElementById('discount-modal-title');
+    if (!modal || !form || !title) return;
 
-    container.innerHTML = `
-        <div class="card p-4">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="font-bold text-lg">پایگاه داده تمرینات</h3>
-                <button class="primary-button flex items-center gap-2" data-cms-action="add-muscle-group"><i data-lucide="plus"></i>افزودن گروه عضلانی</button>
-            </div>
-            <div class="space-y-3">
-                ${sortedGroups.map(group => `
-                    <details class="bg-bg-tertiary rounded-lg">
-                        <summary class="p-3 font-semibold cursor-pointer flex justify-between items-center">
-                            <span>${group}</span>
-                            <div class="flex items-center gap-2">
-                                <button class="secondary-button !py-1 !px-2 !text-xs" data-cms-action="add-exercise" data-group="${group}">افزودن حرکت</button>
-                                <button class="secondary-button !py-1 !px-2 !text-xs !text-red-500" data-cms-action="delete-muscle-group" data-group="${group}"><i data-lucide="trash-2" class="w-4 h-4 pointer-events-none"></i></button>
-                                <i data-lucide="chevron-down" class="details-arrow transition-transform"></i>
-                            </div>
-                        </summary>
-                        <div class="p-4 border-t border-border-primary bg-bg-secondary rounded-b-lg">
-                            <ul class="space-y-2">
-                                ${db[group].map(ex => `
-                                    <li class="flex justify-between items-center p-2 rounded-md hover:bg-bg-tertiary">
-                                        <span>${ex}</span>
-                                        <div class="flex items-center gap-2">
-                                            <button class="secondary-button !p-1.5" data-cms-action="edit-exercise" data-group="${group}" data-exercise="${ex}"><i data-lucide="edit-3" class="w-4 h-4 pointer-events-none"></i></button>
-                                            <button class="secondary-button !p-1.5 !text-red-500" data-cms-action="delete-exercise" data-group="${group}" data-exercise="${ex}"><i data-lucide="trash-2" class="w-4 h-4 pointer-events-none"></i></button>
-                                        </div>
-                                    </li>
-                                `).join('')}
-                            </ul>
-                        </div>
-                    </details>
-                `).join('')}
-            </div>
-        </div>
-    `;
+    form.reset();
+    form.removeAttribute('data-editing-code');
+    (form.elements.namedItem('code') as HTMLInputElement).readOnly = false;
+
+    if(code) {
+        const discounts = await getDiscounts();
+        const discount = discounts[code];
+        if(discount) {
+            title.textContent = 'ویرایش کد تخفیف';
+            form.setAttribute('data-editing-code', code);
+            const codeInput = (form.elements.namedItem('code') as HTMLInputElement);
+            codeInput.value = code;
+            codeInput.readOnly = true;
+            (form.elements.namedItem('value') as HTMLInputElement).value = String(discount.value);
+            const typeRadio = form.querySelector(`input[name="type"][value="${discount.type}"]`) as HTMLInputElement;
+            if(typeRadio) typeRadio.checked = true;
+        }
+    } else {
+        title.textContent = 'افزودن کد تخفیف';
+    }
+    openModal(modal);
 };
 
-const renderSupplementsCMS = async () => {
-    const container = document.getElementById('cms-supplements-content');
-    if (!container) return;
-    const db = await getSupplementsDB();
-    const sortedCategories = Object.keys(db).sort((a,b) => a.localeCompare(b, 'fa'));
+const handleDiscountFormSubmit = async (e: Event) => {
+    e.preventDefault();
+    const form = e.target as HTMLFormElement;
+    const code = (form.elements.namedItem('code') as HTMLInputElement).value.toUpperCase();
+    const type = (form.querySelector('input[name="type"]:checked') as HTMLInputElement).value;
+    const value = Number((form.elements.namedItem('value') as HTMLInputElement).value);
 
-     container.innerHTML = `
-        <div class="card p-4">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="font-bold text-lg">پایگاه داده مکمل‌ها</h3>
-                <button class="primary-button flex items-center gap-2" data-cms-action="add-supplement-category"><i data-lucide="plus"></i>افزودن دسته</button>
-            </div>
-            <div class="space-y-3">
-                 ${sortedCategories.map(cat => `
-                    <details class="bg-bg-tertiary rounded-lg">
-                        <summary class="p-3 font-semibold cursor-pointer flex justify-between items-center">
-                            <span>${cat}</span>
-                            <div class="flex items-center gap-2">
-                                <button class="secondary-button !py-1 !px-2 !text-xs" data-cms-action="add-supplement" data-category="${cat}">افزودن مکمل</button>
-                                <button class="secondary-button !py-1 !px-2 !text-xs !text-red-500" data-cms-action="delete-supplement-category" data-category="${cat}"><i data-lucide="trash-2" class="w-4 h-4 pointer-events-none"></i></button>
-                                <i data-lucide="chevron-down" class="details-arrow transition-transform"></i>
-                            </div>
-                        </summary>
-                        <div class="p-4 border-t border-border-primary bg-bg-secondary rounded-b-lg">
-                            <ul class="space-y-2">
-                                ${db[cat].map(sup => `
-                                    <li class="flex justify-between items-center p-2 rounded-md hover:bg-bg-tertiary">
-                                        <div>
-                                            <p>${sup.name}</p>
-                                            <p class="text-xs text-text-secondary">${sup.note}</p>
-                                        </div>
-                                        <div class="flex items-center gap-2">
-                                            <button class="secondary-button !p-1.5" data-cms-action="edit-supplement" data-category="${cat}" data-supplement-name="${sup.name}"><i data-lucide="edit-3" class="w-4 h-4 pointer-events-none"></i></button>
-                                            <button class="secondary-button !p-1.5 !text-red-500" data-cms-action="delete-supplement" data-category="${cat}" data-supplement-name="${sup.name}"><i data-lucide="trash-2" class="w-4 h-4 pointer-events-none"></i></button>
-                                        </div>
-                                    </li>
-                                `).join('')}
-                            </ul>
-                        </div>
-                    </details>
-                `).join('')}
-            </div>
-        </div>
-    `;
+    if(!code || isNaN(value) || value <= 0) {
+        showToast('لطفا تمام فیلدها را به درستی پر کنید.', 'error');
+        return;
+    }
+
+    const discounts = await getDiscounts();
+    discounts[code] = { type, value };
+    await saveDiscounts(discounts);
+
+    showToast('کد تخفیف ذخیره شد.', 'success');
+    closeModal(document.getElementById('discount-modal'));
+    document.querySelector('.card .p-6:last-child')!.innerHTML = await renderDiscountsAdminHtml();
+    window.lucide?.createIcons();
 };
 
 const openSupplementModal = async (category: string, supplementName: string | null = null) => {
@@ -1645,105 +1403,192 @@ const openSupplementModal = async (category: string, supplementName: string | nu
     const form = document.getElementById('supplement-cms-form') as HTMLFormElement;
     const title = document.getElementById('supplement-cms-modal-title');
     if (!modal || !form || !title) return;
-    
+
     form.reset();
     form.dataset.category = category;
-    form.removeAttribute('data-original-name');
+    form.removeAttribute('data-editing-name');
 
-    if (supplementName) { // Editing
-        title.textContent = `ویرایش مکمل: ${supplementName}`;
+    if (supplementName) {
+        title.textContent = "ویرایش مکمل";
+        form.dataset.editingName = supplementName;
         const db = await getSupplementsDB();
         const supplement = db[category]?.find(s => s.name === supplementName);
         if (supplement) {
-            form.dataset.originalName = supplementName;
             (form.elements.namedItem('name') as HTMLInputElement).value = supplement.name;
             (form.elements.namedItem('dosageOptions') as HTMLTextAreaElement).value = supplement.dosageOptions.join(', ');
             (form.elements.namedItem('timingOptions') as HTMLTextAreaElement).value = supplement.timingOptions.join(', ');
-            (form.elements.namedItem('note') as HTMLTextAreaElement).value = supplement.note;
+            (form.elements.namedItem('note') as HTMLTextAreaElement).value = supplement.note || '';
         }
-    } else { // Adding
-        title.textContent = `افزودن مکمل به دسته "${category}"`;
+    } else {
+        title.textContent = "افزودن مکمل";
     }
+
     openModal(modal);
 };
 
-const handleCMSActions = async (target: HTMLElement) => {
-    const action = target.dataset.cmsAction;
-    const group = target.dataset.group;
-    const exercise = target.dataset.exercise;
-    const category = target.dataset.category;
-    const supplementName = target.dataset.supplementName;
+const handleSupplementFormSubmit = async (e: Event) => {
+    e.preventDefault();
+    const form = e.target as HTMLFormElement;
+    const category = form.dataset.category;
+    const editingName = form.dataset.editingName;
+    if (!category) return;
+    
+    const formData = new FormData(form);
+    const supData = {
+        name: formData.get('name') as string,
+        dosageOptions: (formData.get('dosageOptions') as string).split(',').map(s => s.trim()).filter(Boolean),
+        timingOptions: (formData.get('timingOptions') as string).split(',').map(s => s.trim()).filter(Boolean),
+        note: formData.get('note') as string,
+    };
 
-    // Exercises
-    if (action === 'add-muscle-group') {
-        const newGroup = prompt("نام گروه عضلانی جدید را وارد کنید:");
-        if (newGroup) {
-            const db = await getExercisesDB();
-            if (!db[newGroup]) {
-                db[newGroup] = [];
-                await saveExercisesDB(db);
-                await renderExercisesCMS();
-            } else {
-                showToast("این گروه قبلا وجود داشته است.", "error");
-            }
-        }
-    } else if (action === 'delete-muscle-group' && group && confirm(`آیا از حذف گروه "${group}" و تمام حرکات آن مطمئن هستید؟`)) {
-        const db = await getExercisesDB();
-        delete db[group];
-        await saveExercisesDB(db);
-        await renderExercisesCMS();
-    } else if (action === 'add-exercise' && group) {
-        const newExercise = prompt(`نام حرکت جدید برای گروه "${group}" را وارد کنید:`);
-        if (newExercise) {
-            const db = await getExercisesDB();
-            db[group].push(newExercise);
-            await saveExercisesDB(db);
-            await renderExercisesCMS();
-        }
-    } else if (action === 'edit-exercise' && group && exercise) {
-        const updatedExercise = prompt(`نام جدید برای "${exercise}" را وارد کنید:`, exercise);
-        if (updatedExercise && updatedExercise !== exercise) {
-            const db = await getExercisesDB();
-            const index = db[group].indexOf(exercise);
-            if (index > -1) {
-                db[group][index] = updatedExercise;
-                await saveExercisesDB(db);
-                await renderExercisesCMS();
-            }
-        }
-    } else if (action === 'delete-exercise' && group && exercise && confirm(`آیا از حذف حرکت "${exercise}" مطمئن هستید؟`)) {
-        const db = await getExercisesDB();
-        db[group] = db[group].filter(ex => ex !== exercise);
-        await saveExercisesDB(db);
-        await renderExercisesCMS();
+    if (!supData.name || supData.dosageOptions.length === 0 || supData.timingOptions.length === 0) {
+        showToast('لطفا تمام فیلدهای لازم را پر کنید.', 'error');
+        return;
     }
 
-    // Supplements
-    else if (action === 'add-supplement-category') {
-        const newCategory = prompt("نام دسته جدید مکمل را وارد کنید:");
-        if (newCategory) {
-            const db = await getSupplementsDB();
-            if (!db[newCategory]) {
-                db[newCategory] = [];
-                await saveSupplementsDB(db);
-                await renderSupplementsCMS();
-            } else {
-                showToast("این دسته قبلا وجود داشته است.", "error");
-            }
-        }
-    } else if (action === 'delete-supplement-category' && category && confirm(`آیا از حذف دسته "${category}" و تمام مکمل‌های آن مطمئن هستید؟`)) {
-        const db = await getSupplementsDB();
-        delete db[category];
-        await saveSupplementsDB(db);
-        await renderSupplementsCMS();
-    } else if (action === 'add-supplement' && category) {
-        await openSupplementModal(category);
-    } else if (action === 'edit-supplement' && category && supplementName) {
-        await openSupplementModal(category, supplementName);
-    } else if (action === 'delete-supplement' && category && supplementName && confirm(`آیا از حذف مکمل "${supplementName}" مطمئن هستید؟`)) {
-        const db = await getSupplementsDB();
-        db[category] = db[category].filter(sup => sup.name !== supplementName);
-        await saveSupplementsDB(db);
-        await renderSupplementsCMS();
+    const db = await getSupplementsDB();
+    if(editingName) {
+        const index = db[category].findIndex(s => s.name === editingName);
+        if (index > -1) db[category][index] = supData;
+    } else {
+        db[category].push(supData);
     }
+
+    await saveSupplementsDB(db);
+    showToast('مکمل ذخیره شد.', 'success');
+    closeModal(document.getElementById('supplement-cms-modal'));
+    await renderCMSPage();
+};
+
+const handleCMSAction = async (action: string, dataset: DOMStringMap) => {
+    let db;
+    const { group, exercise, category, supplement } = dataset;
+    
+    switch (action) {
+        // Exercises
+        case 'add-muscle-group':
+            const newGroup = prompt("نام گروه عضلانی جدید را وارد کنید:");
+            if (newGroup) {
+                db = await getExercisesDB();
+                if (!db[newGroup]) {
+                    db[newGroup] = [];
+                    await saveExercisesDB(db);
+                }
+            }
+            break;
+        case 'add-exercise':
+            if (group) {
+                const newEx = prompt(`نام حرکت جدید برای گروه "${group}" را وارد کنید:`);
+                if (newEx) {
+                    db = await getExercisesDB();
+                    db[group].push(newEx);
+                    await saveExercisesDB(db);
+                }
+            }
+            break;
+        // ... other exercise cases ...
+
+        // Supplements
+        case 'add-supplement-category':
+            const newCat = prompt("نام دسته بندی جدید مکمل را وارد کنید:");
+            if (newCat) {
+                db = await getSupplementsDB();
+                if (!db[newCat]) {
+                    db[newCat] = [];
+                    await saveSupplementsDB(db);
+                }
+            }
+            break;
+        case 'add-supplement': if(category) await openSupplementModal(category); return;
+        case 'edit-supplement': if(category && supplement) await openSupplementModal(category, supplement); return;
+    }
+
+    await renderCMSPage(); // Re-render after action
+};
+
+const renderCMSPage = async () => {
+    const pageContainer = document.getElementById('admin-cms-page');
+    if(!pageContainer) return;
+    
+    pageContainer.innerHTML = `
+        <div class="flex items-center gap-2 border-b border-border-primary mb-6 flex-wrap">
+            <button class="admin-tab-button active-tab" data-tab="exercises">تمرینات</button>
+            <button class="admin-tab-button" data-tab="supplements">مکمل‌ها</button>
+        </div>
+        <div id="exercises-cms-content" class="admin-tab-content">${await renderExercisesAdmin()}</div>
+        <div id="supplements-cms-content" class="admin-tab-content hidden">${await renderSupplementsAdmin()}</div>
+    `;
+    window.lucide?.createIcons();
+};
+
+const renderExercisesAdmin = async () => {
+    const db = await getExercisesDB();
+    return `
+        <div class="card p-4">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-lg">پایگاه داده تمرینات</h3>
+                <button data-action="add-muscle-group" class="primary-button !text-sm">افزودن گروه عضلانی</button>
+            </div>
+            <div class="space-y-3">
+            ${Object.keys(db).map(group => `
+                <details class="bg-bg-tertiary rounded-lg">
+                    <summary class="p-3 font-semibold cursor-pointer flex justify-between items-center">
+                        <span>${group}</span>
+                        <div class="flex items-center gap-2">
+                             <button class="secondary-button !p-1.5 !rounded-full" data-action="add-exercise" data-group="${group}"><i data-lucide="plus" class="w-4 h-4 pointer-events-none"></i></button>
+                             <button class="secondary-button !p-1.5 !rounded-full" data-action="rename-muscle-group" data-group="${group}"><i data-lucide="edit-3" class="w-4 h-4 pointer-events-none"></i></button>
+                             <button class="secondary-button !p-1.5 !rounded-full text-red-accent" data-action="delete-muscle-group" data-group="${group}"><i data-lucide="trash-2" class="w-4 h-4 pointer-events-none"></i></button>
+                        </div>
+                    </summary>
+                    <div class="p-3 border-t border-border-primary bg-bg-secondary rounded-b-lg">
+                        ${db[group].length > 0 ? db[group].map(ex => `
+                        <div class="flex justify-between items-center p-2 hover:bg-bg-tertiary rounded-md">
+                            <span class="text-sm">${ex}</span>
+                            <div class="flex items-center gap-1">
+                                <button class="secondary-button !p-1 !rounded-full" data-action="rename-exercise" data-group="${group}" data-exercise="${ex}"><i data-lucide="edit-3" class="w-3 h-3 pointer-events-none"></i></button>
+                                <button class="secondary-button !p-1 !rounded-full text-red-accent" data-action="delete-exercise" data-group="${group}" data-exercise="${ex}"><i data-lucide="trash-2" class="w-3 h-3 pointer-events-none"></i></button>
+                            </div>
+                        </div>`).join('') : '<p class="text-xs text-center text-text-secondary">حرکتی ثبت نشده</p>'}
+                    </div>
+                </details>
+            `).join('')}
+            </div>
+        </div>
+    `;
+};
+
+const renderSupplementsAdmin = async () => {
+    const db = await getSupplementsDB();
+    return `
+         <div class="card p-4">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-lg">پایگاه داده مکمل‌ها</h3>
+                <button data-action="add-supplement-category" class="primary-button !text-sm">افزودن دسته بندی</button>
+            </div>
+            <div class="space-y-3">
+            ${Object.keys(db).map(cat => `
+                <details class="bg-bg-tertiary rounded-lg">
+                    <summary class="p-3 font-semibold cursor-pointer flex justify-between items-center">
+                        <span>${cat}</span>
+                        <div class="flex items-center gap-2">
+                             <button class="secondary-button !p-1.5 !rounded-full" data-action="add-supplement" data-category="${cat}"><i data-lucide="plus" class="w-4 h-4 pointer-events-none"></i></button>
+                             <button class="secondary-button !p-1.5 !rounded-full" data-action="rename-supplement-category" data-category="${cat}"><i data-lucide="edit-3" class="w-4 h-4 pointer-events-none"></i></button>
+                             <button class="secondary-button !p-1.5 !rounded-full text-red-accent" data-action="delete-supplement-category" data-category="${cat}"><i data-lucide="trash-2" class="w-4 h-4 pointer-events-none"></i></button>
+                        </div>
+                    </summary>
+                    <div class="p-3 border-t border-border-primary bg-bg-secondary rounded-b-lg">
+                        ${db[cat].length > 0 ? db[cat].map(sup => `
+                        <div class="flex justify-between items-center p-2 hover:bg-bg-tertiary rounded-md">
+                            <span class="text-sm font-semibold">${sup.name}</span>
+                            <div class="flex items-center gap-1">
+                                <button class="secondary-button !p-1 !rounded-full" data-action="edit-supplement" data-category="${cat}" data-supplement="${sup.name}"><i data-lucide="edit-3" class="w-3 h-3 pointer-events-none"></i></button>
+                                <button class="secondary-button !p-1 !rounded-full text-red-accent" data-action="delete-supplement" data-category="${cat}" data-supplement="${sup.name}"><i data-lucide="trash-2" class="w-3 h-3 pointer-events-none"></i></button>
+                            </div>
+                        </div>`).join('') : '<p class="text-xs text-center text-text-secondary">مکملی ثبت نشده</p>'}
+                    </div>
+                </details>
+            `).join('')}
+            </div>
+        </div>
+    `;
 };

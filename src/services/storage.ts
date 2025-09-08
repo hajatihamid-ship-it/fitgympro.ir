@@ -6,10 +6,12 @@ import { exerciseDB as initialExerciseDB, supplementsDB as initialSupplementsDB 
 const DB_NAME = 'fitgympro-db-kv';
 const DB_VERSION = 1;
 const STORE_NAME = 'keyValueStore';
-let db: IDBDatabase;
+let db: IDBDatabase | null;
 
 function openDatabase(): Promise<IDBDatabase> {
     return new Promise((resolve, reject) => {
+        // If we have a valid connection, return it.
+        // The `onclose` handler below will nullify `db` if the connection is lost.
         if (db) {
             return resolve(db);
         }
@@ -22,6 +24,24 @@ function openDatabase(): Promise<IDBDatabase> {
 
         request.onsuccess = () => {
             db = request.result;
+
+            // This handler is crucial for robust multi-tab support.
+            // If another tab requests a higher DB version, this tab's connection needs to close.
+            db.onversionchange = () => {
+                if (db) {
+                    db.close();
+                    console.warn("IndexedDB connection closed due to a version change request.");
+                    db = null; // Invalidate the cached connection.
+                }
+            };
+            
+            // This handler deals with the connection being closed for other reasons,
+            // e.g., by the browser or an OS-level action.
+            db.onclose = () => {
+                console.warn("IndexedDB connection closed.");
+                db = null; // Invalidate the cached connection.
+            };
+
             resolve(db);
         };
 

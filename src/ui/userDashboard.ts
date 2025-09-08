@@ -1108,6 +1108,10 @@ export async function initUserDashboard(currentUser: string, userData: any, hand
                     profileForm.addEventListener('input', checkValidity);
                     profileForm.addEventListener('change', checkValidity);
                     await checkValidity();
+                    
+                    // Initialize slider tracks on load
+                    profileForm.querySelectorAll<HTMLInputElement>('.range-slider').forEach(updateSliderTrack);
+
                     updateProfileMetricsDisplay(profileForm as HTMLElement);
                     
                     const avatarInput = document.getElementById('user-profile-avatar-input');
