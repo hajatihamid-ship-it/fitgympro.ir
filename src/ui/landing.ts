@@ -279,17 +279,23 @@ export const renderLandingPage = async () => {
                 </div>
             </header>
             <main>
-                <section class="hero-section text-white text-center pt-32 pb-20">
+                <section class="hero-section text-white text-center">
                      <div class="container mx-auto px-4">
                         <h1 class="text-4xl lg:text-6xl font-extrabold leading-tight animate-fade-in-down">
-                           آینده تناسب اندام اینجاست
+                           بدن ایده‌آل خود را با fitgympro بسازید
                         </h1>
-                        <p class="mt-6 text-lg text-white/70 max-w-2xl mx-auto animate-fade-in-up">
-                           برنامه‌های تمرینی و غذایی شخصی‌سازی شده با قدرت هوش مصنوعی. به اهداف خود سریع‌تر و هوشمندانه‌تر برسید.
+                        <p class="mt-6 text-lg text-white/70 max-w-2xl mx-auto animate-fade-in-up animation-delay-200">
+                           دیگر نیازی به حدس و خطا نیست. ما با تحلیل دقیق اطلاعات شما، بهترین برنامه تمرینی و غذایی را برایتان طراحی می‌کنیم.
                         </p>
-                        <div class="mt-8 animate-fade-in-up animation-delay-200">
-                             <a href="#fitness-calculator" class="primary-button !bg-accent !text-black !px-10 !py-3 !text-base !rounded-md">شروع کنید</a>
+                        <div class="mt-8 animate-fade-in-up animation-delay-400">
+                            <p class="font-semibold mb-4">هدف اصلی شما چیست؟</p>
+                            <div class="flex justify-center gap-3">
+                                <button class="hero-goal-selector" data-goal-value="کاهش وزن">کاهش وزن</button>
+                                <button class="hero-goal-selector" data-goal-value="حفظ وزن">حفظ وزن</button>
+                                <button class="hero-goal-selector" data-goal-value="افزایش حجم">افزایش حجم</button>
+                            </div>
                         </div>
+                        <p class="text-sm text-slate-400 mt-8 animate-fade-in-up animation-delay-800">به بیش از ۱۰۰۰ ورزشکار راضی بپیوندید</p>
                     </div>
                 </section>
             </main>
@@ -441,6 +447,22 @@ const handleLandingPageClicks = (e: MouseEvent) => {
             sessionStorage.setItem('fitgympro_selected_plan', planId);
             closeModal(selectPlanBtn.closest('.modal'));
             openModal(document.getElementById('auth-modal'));
+        }
+        return;
+    }
+    
+    // Hero Goal Selector
+    const heroGoalBtn = target.closest<HTMLElement>('.hero-goal-selector');
+    if (heroGoalBtn) {
+        const goalValue = heroGoalBtn.dataset.goalValue;
+        const calculatorSection = document.getElementById('fitness-calculator');
+        const goalRadio = document.querySelector(`input[name="goal_calc"][value="${goalValue}"]`) as HTMLInputElement;
+
+        if (goalRadio && calculatorSection) {
+            goalRadio.checked = true;
+            // Manually trigger change event for any listeners
+            goalRadio.dispatchEvent(new Event('change', { bubbles: true }));
+            calculatorSection.scrollIntoView({ behavior: 'smooth' });
         }
         return;
     }

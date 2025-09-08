@@ -1174,10 +1174,44 @@
         .landing-page-revert .landing-nav-link:hover {
             color: #ffffff;
         }
+        @keyframes kenburns-top {
+          0% { transform: scale(1) translateY(0); transform-origin: 50% 16%; }
+          100% { transform: scale(1.1) translateY(-10px); transform-origin: top; }
+        }
         .hero-section-wrapper {
             background-image: linear-gradient(to top, #0B1222 5%, rgba(11, 18, 34, 0.7) 50%), url('https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?q=80&w=2069&auto=format&fit=crop');
             background-size: cover;
             background-position: center;
+            animation: kenburns-top 15s ease-out both;
+        }
+        .hero-section {
+            min-height: 70vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .hero-goal-selector {
+            background-color: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #e2e8f0;
+            font-weight: 600;
+            padding: 0.75rem 1rem;
+            border-radius: 0.75rem;
+            transition: all 0.2s;
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+        }
+        .hero-goal-selector:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+            transform: translateY(-3px);
+        }
+        @keyframes pulse-yellow {
+            0% { box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(250, 204, 21, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(250, 204, 21, 0); }
+        }
+        .animate-pulse-yellow {
+            animation: pulse-yellow 2s infinite;
         }
         .calculator-wrapper {
             background-color: rgba(30, 41, 59, 0.8);
