@@ -89,7 +89,7 @@ export const updateSliderTrack = (slider: HTMLInputElement) => {
     }
 
     const trackColor = getComputedStyle(document.documentElement).getPropertyValue("--range-track-bg").trim();
-    slider.style.background = `linear-gradient(to left, ${accentColor} ${percentage}%, ${trackColor} ${percentage}%)`;
+    slider.style.background = `linear-gradient(to right, ${accentColor} ${percentage}%, ${trackColor} ${percentage}%)`;
 };
 
 export const openModal = (modalElement: HTMLElement | null) => {

@@ -275,3 +275,46 @@ export const generateCoachingInsight = async (coachData: any, students: any[]): 
         return null;
     }
 };
+
+export const generateExerciseSuggestion = async (muscleGroup: string, trainingGoal: string): Promise<{ exerciseName: string } | null> => {
+    const ai = getGenAI();
+    const exerciseDB = await getExercisesDB();
+    const availableExercises = Object.values(exerciseDB).flat().join(', ');
+
+    const prompt = `
+        You are an expert fitness coach. Your task is to suggest ONE single exercise.
+        - The client's primary goal is: "${trainingGoal}".
+        - The target muscle group for today is: "${muscleGroup}".
+        - You MUST choose one exercise from the following list of available exercises: ${availableExercises}.
+        - Do not suggest any exercise not on this list.
+        - Consider the goal. For "افزایش حجم" (mass gain), compound movements are good. For "کاهش وزن" (weight loss), full-body or high-intensity moves can be good.
+        - Return your answer in JSON format with a single key "exerciseName".
+    `;
+
+    try {
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: Type.OBJECT,
+                    properties: {
+                        exerciseName: {
+                            type: Type.STRING,
+                            description: "The name of the suggested exercise, chosen from the provided list."
+                        }
+                    }
+                }
+            }
+        });
+        
+        const jsonText = response.text.trim();
+        return JSON.parse(jsonText);
+
+    } catch (error) {
+        console.error("AI Exercise Suggestion Error:", error);
+        showToast("خطا در تولید پیشنهاد حرکت ورزشی", "error");
+        return null;
+    }
+};

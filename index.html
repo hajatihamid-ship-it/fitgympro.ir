@@ -1600,6 +1600,32 @@
             background-color: var(--accent);
             transition: width 0.5s ease;
         }
+
+        /* --- New User Profile Card Styles --- */
+        .gender-card-input:checked + .gender-card-content {
+            border-color: var(--accent);
+            background-color: var(--accent-transparent-15);
+            box-shadow: 0 0 0 2px var(--accent-transparent-30);
+        }
+        .gender-card-input:checked + .gender-card-content p {
+            font-weight: 700;
+            color: var(--accent);
+        }
+        .gender-card-input:checked + .gender-card-content .icon-container {
+            background-color: var(--accent);
+        }
+        .gender-card-input:checked + .gender-card-content .lucide {
+            color: var(--bg-secondary);
+        }
+        .metric-card {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .metric-card .range-slider {
+            margin-top: 0.5rem;
+        }
+
     </style>
 <script type="importmap">
 {

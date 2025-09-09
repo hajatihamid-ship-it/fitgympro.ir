@@ -1,7 +1,7 @@
 import { getTemplates, saveTemplate, deleteTemplate, getUsers, getUserData, saveUserData, getNotifications, setNotification, clearNotification, getExercisesDB, getSupplementsDB } from '../services/storage';
 import { showToast, updateSliderTrack, openModal, closeModal, exportElement, sanitizeHTML, hexToRgba } from '../utils/dom';
 import { getLatestPurchase, timeAgo, getLastActivity } from '../utils/helpers';
-import { generateWorkoutPlan, generateSupplementPlan, generateNutritionPlan, generateFoodReplacements, generateCoachingInsight } from '../services/gemini';
+import { generateWorkoutPlan, generateSupplementPlan, generateNutritionPlan, generateFoodReplacements, generateCoachingInsight, generateExerciseSuggestion } from '../services/gemini';
 import { calculateWorkoutStreak, performMetricCalculations, getWeightChange } from '../utils/calculations';
 import { getGenAI } from '../state';
 
@@ -1787,6 +1787,7 @@ const renderProgramBuilderTab = () => {
                                     <summary class="font-bold cursor-pointer flex justify-between items-center p-3">
                                         <span>${day}</span>
                                         <div class="flex items-center gap-2">
+                                            <button class="secondary-button !py-1 !px-2 !text-xs" data-action="suggest-exercise-ai" data-day-id="day-card-${day}" title="پیشنهاد حرکت با AI"><i data-lucide="sparkles" class="w-4 h-4 pointer-events-none"></i></button>
                                             <button class="add-exercise-btn secondary-button !py-1 !px-2 !text-xs" data-day-id="day-card-${day}">افزودن حرکت</button>
                                             <i data-lucide="chevron-down" class="details-arrow"></i>
                                         </div>
@@ -2425,6 +2426,55 @@ export async function initCoachDashboard(currentUser: string, handleLogout: () =
                         await deleteTemplate(templateName);
                         showToast('الگو حذف شد.', 'success');
                         await renderTemplatesTab();
+                    }
+                    break;
+                case 'suggest-exercise-ai':
+                    if (!activeStudentUsername) {
+                        showToast("ابتدا یک شاگرد را انتخاب کنید.", "error");
+                        return;
+                    }
+                    const dayId = actionBtn.dataset.dayId;
+                    const dayCard = document.getElementById(dayId!);
+                    if (!dayCard) return;
+
+                    const dayTitle = dayCard.querySelector('summary span')?.textContent || '';
+                    const muscleGroup = dayTitle.split(':')[1]?.trim();
+                    if (!muscleGroup) {
+                        showToast('گروه عضلانی برای این روز مشخص نیست.', 'error');
+                        return;
+                    }
+
+                    actionBtn.classList.add('is-loading');
+                    actionBtn.disabled = true;
+
+                    try {
+                        const studentData = await getUserData(activeStudentUsername);
+                        const trainingGoal = studentData.step1?.trainingGoal;
+                        if (!trainingGoal) {
+                            showToast('هدف تمرینی شاگرد مشخص نیست.', 'error');
+                            return;
+                        }
+                        
+                        const suggestion = await generateExerciseSuggestion(muscleGroup, trainingGoal);
+                        
+                        if (suggestion && suggestion.exerciseName) {
+                            const exercisesDB = await getExercisesDB();
+                            const allExercises = Object.values(exercisesDB).flat();
+                            if (allExercises.includes(suggestion.exerciseName)) {
+                                await addExerciseRow(dayId!, { name: suggestion.exerciseName, sets: 4, reps: 10, rest: 60 });
+                                showToast(`حرکت "${suggestion.exerciseName}" اضافه شد.`, 'success');
+                            } else {
+                                showToast(`حرکت پیشنهادی "${suggestion.exerciseName}" در پایگاه داده یافت نشد.`, 'warning');
+                            }
+                        } else {
+                            showToast('خطا در دریافت پیشنهاد از AI.', 'error');
+                        }
+                    } catch (error) {
+                        console.error("AI suggestion error:", error);
+                        showToast('خطا در ارتباط با سرویس هوش مصنوعی.', 'error');
+                    } finally {
+                        actionBtn.classList.remove('is-loading');
+                        actionBtn.disabled = false;
                     }
                     break;
             }

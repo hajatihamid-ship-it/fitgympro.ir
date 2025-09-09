@@ -978,13 +978,52 @@ const renderProfileTab = async (currentUser: string, userData: any) => {
                         </button>
                         ${coachNotSelected ? `<div class="coach-selection-warning"><i data-lucide="alert-triangle" class="w-4 h-4"></i><span>لطفا مربی خود را انتخاب کنید.</span></div>` : ''}
                     </div>
-                    <div class="radio-group-pink"><p class="text-sm font-semibold mb-2">جنسیت</p><div class="grid grid-cols-2 gap-2">
-                        <label class="option-card-label"><input type="radio" name="gender_user" value="مرد" class="option-card-input" ${step1?.gender === 'مرد' ? 'checked data-is-checked="true"' : ''}><span class="option-card-content">مرد</span></label>
-                        <label class="option-card-label"><input type="radio" name="gender_user" value="زن" class="option-card-input" ${step1?.gender === 'زن' ? 'checked data-is-checked="true"' : ''}><span class="option-card-content">زن</span></label>
-                    </div></div>
-                    <div class="space-y-1 slider-container-blue"><label class="font-semibold text-sm">سن: <span>${step1?.age || 25}</span></label><input type="range" name="age" min="15" max="80" value="${step1?.age || 25}" class="range-slider age-slider w-full mt-1"></div>
-                    <div class="space-y-1 slider-container-green"><label class="font-semibold text-sm">قد (cm): <span>${step1?.height || 175}</span></label><input type="range" name="height" min="140" max="220" value="${step1?.height || 175}" class="range-slider height-slider w-full mt-1"></div>
-                    <div class="space-y-1 slider-container-orange"><label class="font-semibold text-sm">وزن (kg): <span>${step1?.weight || 75}</span></label><input type="range" name="weight" min="40" max="150" step="0.5" value="${step1?.weight || 75}" class="range-slider weight-slider w-full mt-1"></div>
+                    <div>
+                        <p class="text-sm font-semibold mb-3">جنسیت</p>
+                        <div class="grid grid-cols-2 gap-4">
+                            <label>
+                                <input type="radio" name="gender_user" value="مرد" class="gender-card-input hidden" ${step1?.gender === 'مرد' ? 'checked data-is-checked="true"' : ''}>
+                                <div class="gender-card-content card !p-4 text-center cursor-pointer transition-all duration-200 hover:border-border-secondary">
+                                    <div class="icon-container w-12 h-12 rounded-full bg-bg-tertiary mx-auto flex items-center justify-center mb-2 transition-all duration-200">
+                                        <i data-lucide="male-symbol" class="w-6 h-6 text-text-secondary"></i>
+                                    </div>
+                                    <p class="font-semibold transition-colors">مرد</p>
+                                </div>
+                            </label>
+                            <label>
+                                <input type="radio" name="gender_user" value="زن" class="gender-card-input hidden" ${step1?.gender === 'زن' ? 'checked data-is-checked="true"' : ''}>
+                                <div class="gender-card-content card !p-4 text-center cursor-pointer transition-all duration-200 hover:border-border-secondary">
+                                    <div class="icon-container w-12 h-12 rounded-full bg-bg-tertiary mx-auto flex items-center justify-center mb-2 transition-all duration-200">
+                                        <i data-lucide="female-symbol" class="w-6 h-6 text-text-secondary"></i>
+                                    </div>
+                                    <p class="font-semibold transition-colors">زن</p>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div class="metric-card card !p-4 slider-container-blue">
+                            <div class="text-center">
+                                <label class="font-semibold text-sm text-text-secondary">سن</label>
+                                <p class="my-1"><span class="text-4xl font-bold">${step1?.age || 25}</span><span class="text-text-secondary"> سال</span></p>
+                            </div>
+                            <input type="range" name="age" min="15" max="80" value="${step1?.age || 25}" class="range-slider age-slider w-full">
+                        </div>
+                        <div class="metric-card card !p-4 slider-container-green">
+                            <div class="text-center">
+                                <label class="font-semibold text-sm text-text-secondary">قد (cm)</label>
+                                <p class="my-1"><span class="text-4xl font-bold">${step1?.height || 175}</span><span class="text-text-secondary"> cm</span></p>
+                            </div>
+                            <input type="range" name="height" min="140" max="220" value="${step1?.height || 175}" class="range-slider height-slider w-full">
+                        </div>
+                        <div class="metric-card card !p-4 slider-container-orange">
+                            <div class="text-center">
+                                <label class="font-semibold text-sm text-text-secondary">وزن (kg)</label>
+                                <p class="my-1"><span class="text-4xl font-bold">${(step1?.weight || 75).toFixed(1)}</span><span class="text-text-secondary"> kg</span></p>
+                            </div>
+                            <input type="range" name="weight" min="40" max="150" step="0.5" value="${step1?.weight || 75}" class="range-slider weight-slider w-full">
+                        </div>
+                    </div>
                     <div><p class="text-sm font-semibold mb-2">هدف اصلی شما</p><div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
                         ${trainingGoals.map(goal => `<label class="option-card-label"><input type="radio" name="training_goal_user" value="${goal}" class="option-card-input" ${step1?.trainingGoal === goal ? 'checked data-is-checked="true"' : ''}><span class="option-card-content">${goal}</span></label>`).join('')}
                     </div></div>
@@ -1480,8 +1519,13 @@ export async function initUserDashboard(currentUser: string, userData: any, hand
         const target = e.target as HTMLInputElement;
         const profileForm = target.closest('#user-profile-form');
         if (target.matches('.range-slider')) {
-            const labelSpan = target.previousElementSibling?.querySelector('span');
-            if (labelSpan) labelSpan.textContent = target.value;
+            const card = target.closest('.metric-card');
+            if (card) {
+                const valueSpan = card.querySelector('.text-4xl.font-bold');
+                if (valueSpan) {
+                     valueSpan.textContent = target.step === '0.5' ? parseFloat(target.value).toFixed(1) : target.value;
+                }
+            }
             updateSliderTrack(target);
             if (profileForm) {
                 updateProfileMetricsDisplay(profileForm as HTMLElement);
