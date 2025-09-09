@@ -2434,6 +2434,39 @@ export async function initCoachDashboard(currentUser: string, handleLogout: () =
         
         // --- Program Builder specific clicks ---
         if(target.closest('#program-builder-content')){
+            if (target.id === 'ai-draft-btn') {
+                if (!activeStudentUsername) {
+                    showToast("ابتدا یک شاگرد را انتخاب کنید.", "error");
+                    return;
+                }
+                const btn = target as HTMLButtonElement;
+                btn.classList.add('is-loading');
+                btn.disabled = true;
+
+                try {
+                    const studentData = await getUserData(activeStudentUsername);
+                    if (!studentData || !studentData.step1) {
+                        showToast("اطلاعات پروفایل شاگرد کامل نیست.", "error");
+                        return;
+                    }
+                    
+                    const aiPlan = await generateWorkoutPlan(studentData.step1);
+                    
+                    if (aiPlan) {
+                        await populateBuilderWithAI(aiPlan);
+                    } else {
+                        showToast("خطا در تولید پیش‌نویس برنامه. لطفاً دوباره تلاش کنید.", "error");
+                    }
+                } catch (error) {
+                    console.error("AI Draft Error:", error);
+                    showToast("خطای پیش‌بینی نشده در ساخت پیش‌نویس.", "error");
+                } finally {
+                    btn.classList.remove('is-loading');
+                    btn.disabled = false;
+                }
+                return; // Stop further execution
+            }
+
             if(target.id === 'select-student-builder-btn'){
                 await openStudentSelectionModal(target, currentUser);
             }
@@ -2446,6 +2479,76 @@ export async function initCoachDashboard(currentUser: string, handleLogout: () =
             if(target.id === 'prev-step-btn') {
                 if(currentStep > 1) changeStep(currentStep - 1);
             }
+            if (target.id === 'finish-program-btn') {
+                if (!activeStudentUsername) {
+                    showToast("شاگردی انتخاب نشده است.", "error");
+                    return;
+                }
+                const btn = target as HTMLButtonElement;
+                btn.classList.add('is-loading');
+                btn.disabled = true;
+        
+                try {
+                    const planData = await gatherPlanData();
+                    if (!planData) {
+                        showToast("خطا در جمع‌آوری اطلاعات برنامه.", "error");
+                        return;
+                    }
+                    
+                    const isLocal = activeStudentUsername.startsWith('local_');
+                    if(isLocal) {
+                        const coachData = await getUserData(currentUser);
+                        const localStudents = coachData.localStudents || [];
+                        const studentIndex = localStudents.findIndex((s:any) => s.id === activeStudentUsername);
+                        if (studentIndex > -1) {
+                            if (!localStudents[studentIndex].programHistory) localStudents[studentIndex].programHistory = [];
+                            localStudents[studentIndex].programHistory.unshift({ date: new Date().toISOString(), ...planData });
+                            coachData.localStudents = localStudents;
+                            await saveUserData(currentUser, coachData);
+                        }
+                    } else {
+                        const studentData = await getUserData(activeStudentUsername);
+                         if (!studentData.programHistory) studentData.programHistory = [];
+                         studentData.programHistory.unshift({ date: new Date().toISOString(), ...planData });
+        
+                         const latestPurchase = getLatestPurchase(studentData);
+                         if (latestPurchase) {
+                             const subIndex = studentData.subscriptions.findIndex((s:any) => s.purchaseDate === latestPurchase.purchaseDate);
+                             if (subIndex > -1) {
+                                 studentData.subscriptions[subIndex].fulfilled = true;
+                             }
+                         }
+                         await saveUserData(activeStudentUsername, studentData);
+                         await setNotification(activeStudentUsername, 'program-content', '📄');
+                    }
+                   
+                    await setNotification(currentUser, 'students-content', '✅');
+        
+                    showToast(`برنامه با موفقیت برای ${planData.student.clientName} ارسال شد.`, 'success');
+                    resetProgramBuilder();
+                    
+                } catch (error) {
+                    console.error("Error finalizing program:", error);
+                    showToast("خطا در ارسال برنامه.", "error");
+                } finally {
+                    btn.classList.remove('is-loading');
+                    btn.disabled = false;
+                }
+                return;
+            }
+        
+            if (target.id === 'save-program-pdf-btn-builder') {
+                if (!activeStudentUsername) { showToast("ابتدا شاگرد را انتخاب کنید.", "error"); return; }
+                exportElement('#program-preview-for-export', 'pdf', `FitGymPro-Program-${activeStudentUsername}.pdf`, target as HTMLButtonElement);
+                return;
+            }
+        
+            if (target.id === 'save-program-img-btn-builder') {
+                if (!activeStudentUsername) { showToast("ابتدا شاگرد را انتخاب کنید.", "error"); return; }
+                exportElement('#program-preview-for-export', 'png', `FitGymPro-Program-${activeStudentUsername}.png`, target as HTMLButtonElement);
+                return;
+            }
+
             const stepperItem = target.closest<HTMLElement>('.stepper-item');
             if (stepperItem?.dataset.step) {
                 const step = parseInt(stepperItem.dataset.step, 10);
