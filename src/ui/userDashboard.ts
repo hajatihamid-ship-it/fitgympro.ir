@@ -670,12 +670,12 @@ const renderCartModalContentAndBadge = async (currentUser: string) => {
 };
 
 
-// FIX: Make function async to await getUserData()
 const renderStoreTab = async (currentUser: string) => {
     const container = document.getElementById('store-content');
     if (!container) return;
     const plans = await getStorePlans();
-    const hasCoach = !!(await getUserData(currentUser)).step1?.coachName;
+    const userData = await getUserData(currentUser);
+    const hasCoach = !!userData.step1?.coachName;
     
     container.innerHTML = `
         ${!hasCoach ? `
@@ -1381,6 +1381,12 @@ export async function initUserDashboard(currentUser: string, userData: any, hand
                 if (storeTab) await switchTab(storeTab);
             }
         }
+        
+        const goToProfileBtn = target.closest('#go-to-profile-from-store');
+        if (goToProfileBtn) {
+            const profileTab = document.querySelector<HTMLElement>('.coach-nav-link[data-target="profile-content"]');
+            if (profileTab) await switchTab(profileTab);
+        }
 
         const savePdfBtn = target.closest('#save-program-pdf-btn');
         if (savePdfBtn) {
@@ -1471,10 +1477,10 @@ export async function initUserDashboard(currentUser: string, userData: any, hand
             return; // Important to stop execution here after re-render
         }
 
-        const goToProfileBtn = target.closest('#go-to-profile-from-store') || target.closest('#go-to-profile-from-nutrition');
-        if (goToProfileBtn) {
-            const profileTab = document.querySelector<HTMLElement>('.coach-nav-link[data-target="profile-content"]');
-            if (profileTab) await switchTab(profileTab);
+        const goToStoreBtn = target.closest('#go-to-store-from-nutrition');
+        if (goToStoreBtn) {
+            const storeTab = document.querySelector<HTMLElement>('.coach-nav-link[data-target="store-content"]');
+            if (storeTab) await switchTab(storeTab);
         }
 
         const selectCoachBtn = target.closest('#select-coach-btn');
@@ -1617,10 +1623,12 @@ export async function initUserDashboard(currentUser: string, userData: any, hand
 
         if (target.id === 'user-profile-form') {
             const form = target as HTMLFormElement;
-            const freshUserData = await getUserData(currentUser);
+            const oldUserData = await getUserData(currentUser);
+            const wasProfileIncomplete = !oldUserData.step1?.coachName;
+
             const dataToUpdate: any = {
-                step1: { ...freshUserData.step1 },
-                profile: { ...freshUserData.profile }
+                step1: { ...oldUserData.step1 },
+                profile: { ...oldUserData.profile }
             };
 
             const getVal = (selector: string) => (form.querySelector(selector) as HTMLInputElement)?.value.trim();
@@ -1653,23 +1661,13 @@ export async function initUserDashboard(currentUser: string, userData: any, hand
             const weight = getFloat('input[name="weight"]');
             if (!isNaN(weight)) {
                 dataToUpdate.step1.weight = weight;
-                if (!freshUserData.weightHistory) freshUserData.weightHistory = [];
-                // Only add a new entry if the weight is different from the last one
-                const lastWeightEntry = freshUserData.weightHistory[freshUserData.weightHistory.length - 1];
+                if (!oldUserData.weightHistory) oldUserData.weightHistory = [];
+                const lastWeightEntry = oldUserData.weightHistory[oldUserData.weightHistory.length - 1];
                 if (!lastWeightEntry || lastWeightEntry.weight !== weight) {
-                     freshUserData.weightHistory.push({ date: new Date().toISOString(), weight });
+                     oldUserData.weightHistory.push({ date: new Date().toISOString(), weight });
                 }
             }
-
-            const neck = getFloat('.neck-input');
-            if (!isNaN(neck)) dataToUpdate.step1.neck = neck;
-
-            const waist = getFloat('.waist-input');
-            if (!isNaN(waist)) dataToUpdate.step1.waist = waist;
-
-            const hip = getFloat('.hip-input');
-            if (!isNaN(hip)) dataToUpdate.step1.hip = hip;
-
+            
             const trainingGoal = getRadio("training_goal_user");
             if (trainingGoal) dataToUpdate.step1.trainingGoal = trainingGoal;
             
@@ -1685,10 +1683,20 @@ export async function initUserDashboard(currentUser: string, userData: any, hand
             }
             dataToUpdate.lastProfileUpdate = new Date().toISOString();
 
-            await saveUserData(currentUser, { ...freshUserData, ...dataToUpdate });
+            await saveUserData(currentUser, { ...oldUserData, ...dataToUpdate });
+            const newUserData = await getUserData(currentUser);
             
             await addActivityLog(`${currentUser} updated their profile.`);
-            showToast('اطلاعات با موفقیت برای مربی ارسال شد.', 'success');
+
+            if (wasProfileIncomplete && newUserData.step1?.coachName) {
+                showToast('پروفایل شما کامل شد! در حال انتقال به فروشگاه...', 'success');
+                setTimeout(() => {
+                    const storeTab = mainContainer.querySelector<HTMLElement>('.coach-nav-link[data-target="store-content"]');
+                    if (storeTab) switchTab(storeTab);
+                }, 1500);
+            } else {
+                showToast('اطلاعات با موفقیت برای مربی ارسال شد.', 'success');
+            }
             
             const name = dataToUpdate.step1.clientName || currentUser;
             const coachData = await getUserData(dataToUpdate.step1.coachName);
@@ -1708,11 +1716,10 @@ export async function initUserDashboard(currentUser: string, userData: any, hand
                 (textContainer.querySelector('.text-xs.text-text-secondary') as HTMLElement).textContent = `مربی: ${coachName}`;
             }
             
-            // Re-render tab to show updated info
-            await renderProfileTab(currentUser, await getUserData(currentUser));
-            const profileForm = document.getElementById('user-profile-form');
-            if (profileForm) {
-                updateProfileMetricsDisplay(profileForm as HTMLElement);
+            await renderProfileTab(currentUser, newUserData);
+            const newProfileForm = document.getElementById('user-profile-form');
+            if (newProfileForm) {
+                updateProfileMetricsDisplay(newProfileForm as HTMLElement);
                 await checkProfileFormValidity(currentUser);
             }
         }
