@@ -13,48 +13,37 @@ export const switchAuthForm = (formToShow: 'login' | 'signup' | 'forgot-password
     };
 
     let activeContainer: HTMLElement | null = null;
+    let isInitialOpen = true;
 
-    // Find the currently active container to determine if it's an initial open or a switch
+    // Find and start hiding any currently visible form
     Object.values(containers).forEach(container => {
         if (container && container.classList.contains('form-active')) {
+            isInitialOpen = false;
             activeContainer = container;
+            container.classList.remove('form-active');
+            container.classList.add('is-switching-out');
         }
     });
 
-    const isInitialOpen = !activeContainer;
-
-    // Hide the currently active container if we are switching
-    if (activeContainer) {
-        activeContainer.classList.remove('form-active');
-        activeContainer.classList.add('is-switching-out');
-        activeContainer.addEventListener('transitionend', () => {
-            activeContainer?.classList.add('hidden');
-            activeContainer?.classList.remove('is-switching-out');
-        }, { once: true });
-    }
-
-    // Show the new container
     const newContainer = containers[formToShow];
-    if (newContainer) {
-        // If it's the first form being shown, do it instantly without transition delay
-        if (isInitialOpen) {
-            // Ensure no other forms are accidentally active
-            Object.values(containers).forEach(c => {
-                if (c) c.classList.remove('form-active');
-            });
+    if (!newContainer) return;
 
-            newContainer.classList.remove('hidden');
-            newContainer.classList.add('form-active');
-        } else {
-            // If we are switching, use a timeout to allow the old form to transition out
-            setTimeout(() => {
-                newContainer.classList.remove('hidden');
-                // Force reflow to ensure transition is applied correctly
-                void newContainer.offsetWidth; 
-                newContainer.classList.add('form-active');
-            }, 150);
+    // Determine the delay before showing the new form.
+    // If switching from another form, wait for its fade-out animation (300ms).
+    // If it's the initial open, wait just a bit for the modal itself to start appearing (50ms).
+    const showDelay = isInitialOpen ? 50 : 300;
+
+    setTimeout(() => {
+        // Clean up the old container after its transition
+        if (activeContainer) {
+            activeContainer.classList.add('hidden');
+            activeContainer.classList.remove('is-switching-out');
         }
-    }
+
+        // Show the new form
+        newContainer.classList.remove('hidden');
+        newContainer.classList.add('form-active');
+    }, showDelay);
 };
 
 
