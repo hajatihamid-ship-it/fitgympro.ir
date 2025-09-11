@@ -210,7 +210,7 @@ const renderPricingContent = async () => {
 const renderMagazineContent = async () => {
     const articles = await getMagazineArticles();
     if (!articles || articles.length === 0) return '';
-    const latestArticles = articles.slice(0, 2); 
+    const latestArticles = articles.slice(0, 4); 
 
     return `
         <div class="text-center mb-10">

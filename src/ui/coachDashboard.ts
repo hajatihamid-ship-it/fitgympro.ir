@@ -1571,11 +1571,11 @@ const renderDashboardTab = async (currentUser: string, coachData: any) => {
     if (!container) return;
 
     container.innerHTML = `
-        <div class="space-y-6">
+        <div class="space-y-6 animate-fade-in">
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                ${kpiCards.map(kpi => `
-                    <div class="stat-card">
-                        <div class="icon-container" style="--icon-bg: var(--${kpi.color});"><i data-lucide="${kpi.icon}" class="w-6 h-6 text-white"></i></div>
+                ${kpiCards.map((kpi, index) => `
+                    <div class="stat-card animate-fade-in-up" style="animation-delay: ${index * 100}ms;">
+                        <div class="icon-container" style="--icon-bg: var(--${kpi.color}); background-color: var(--${kpi.color});"><i data-lucide="${kpi.icon}" class="w-6 h-6 text-white"></i></div>
                         <div>
                             ${kpi.unit ? `
                                 <div class="flex items-baseline gap-x-1">
@@ -1592,11 +1592,11 @@ const renderDashboardTab = async (currentUser: string, coachData: any) => {
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div class="lg:col-span-2 admin-chart-container h-96">
+                <div class="lg:col-span-2 admin-chart-container h-96 animate-fade-in-up" style="animation-delay: 400ms;">
                     <h3 class="font-bold mb-4">رشد شاگردان (۶ ماه اخیر)</h3>
                     <canvas id="coach-growth-chart"></canvas>
                 </div>
-                <div class="space-y-6">
+                <div class="space-y-6 animate-fade-in-up" style="animation-delay: 500ms;">
                     <div class="card p-6">
                         <div class="flex items-center gap-3 mb-3">
                             <i data-lucide="sparkles" class="w-6 h-6 text-accent"></i>
@@ -1608,7 +1608,7 @@ const renderDashboardTab = async (currentUser: string, coachData: any) => {
                 </div>
             </div>
             
-            <div class="card p-6">
+            <div class="card p-6 animate-fade-in-up" style="animation-delay: 600ms;">
                 <h3 class="font-bold text-lg mb-4">شاگردان در انتظار برنامه</h3>
                 <div id="dashboard-needs-attention-list" class="space-y-3">
                     ${needsPlanStudents.length > 0 ? needsPlanStudents.map(student => {
