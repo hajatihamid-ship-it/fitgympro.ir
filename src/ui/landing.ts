@@ -32,42 +32,57 @@ const renderCalculator = () => `
                     </p>
                 </div>
                 
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-x-12 gap-y-8">
-
-                    <!-- INPUTS -->
-                    <div id="calculator-inputs" class="space-y-6">
-                        <!-- Basic Info Section -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-x-12 gap-y-10">
+                    <!-- RIGHT COLUMN: All Inputs -->
+                    <div class="space-y-8">
                         <div class="calculator-input-section">
                             <h3 class="!mb-4"><span>۱</span>اطلاعات پایه</h3>
-                            <div class="space-y-4">
-                                <div class="calculator-radio-group grid grid-cols-12 items-center gap-x-4">
-                                    <p class="font-semibold text-sm text-slate-300 col-span-3">جنسیت</p>
-                                    <div class="grid grid-cols-2 gap-2 col-span-9">
-                                        <label class="option-card-label"><input type="radio" name="gender_calc" value="مرد" class="option-card-input" checked><span class="option-card-content !py-2">مرد</span></label>
-                                        <label class="option-card-label"><input type="radio" name="gender_calc" value="زن" class="option-card-input"><span class="option-card-content !py-2">زن</span></label>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 items-end">
+                                <div>
+                                    <p class="font-semibold text-sm text-slate-300 mb-2">جنسیت</p>
+                                    <div class="calculator-radio-group grid grid-cols-2 gap-4">
+                                        <label>
+                                            <input type="radio" name="gender_calc" value="مرد" class="option-card-input" checked>
+                                            <div class="gender-selector-card">
+                                                <i data-lucide="male-symbol"></i>
+                                                <p>مرد</p>
+                                            </div>
+                                        </label>
+                                        <label>
+                                            <input type="radio" name="gender_calc" value="زن" class="option-card-input">
+                                            <div class="gender-selector-card">
+                                                <i data-lucide="female-symbol"></i>
+                                                <p>زن</p>
+                                            </div>
+                                        </label>
                                     </div>
                                 </div>
-                                
-                                <div class="slider-container-blue grid grid-cols-12 items-center gap-x-4">
-                                    <p class="font-semibold text-sm text-slate-300 col-span-3">سن</p>
-                                    <input type="range" id="age-slider" class="calculator-slider age-slider col-span-6" min="15" max="80" value="25">
-                                    <input type="number" id="age-input" class="calculator-styled-input col-span-3 w-full" min="15" max="80" value="25">
+                                <div class="slider-group slider-container-blue">
+                                    <div class="calculator-slider-label">
+                                        <span>سن</span>
+                                        <input type="number" class="calculator-styled-input age-input" min="15" max="80" value="25">
+                                    </div>
+                                    <input type="range" class="calculator-slider age-slider w-full" min="15" max="80" value="25">
                                 </div>
 
-                                <div class="slider-container-green grid grid-cols-12 items-center gap-x-4">
-                                    <p class="font-semibold text-sm text-slate-300 col-span-3">قد (cm)</p>
-                                    <input type="range" id="height-slider" class="calculator-slider height-slider col-span-6" min="140" max="220" value="175">
-                                    <input type="number" id="height-input" class="calculator-styled-input col-span-3 w-full" min="140" max="220" value="175">
+                                <div class="slider-group slider-container-green">
+                                     <div class="calculator-slider-label">
+                                        <span>قد (cm)</span>
+                                        <input type="number" class="calculator-styled-input height-input" min="140" max="220" value="175">
+                                    </div>
+                                    <input type="range" class="calculator-slider height-slider w-full" min="140" max="220" value="175">
                                 </div>
 
-                                <div class="slider-container-orange grid grid-cols-12 items-center gap-x-4">
-                                    <p class="font-semibold text-sm text-slate-300 col-span-3">وزن (kg)</p>
-                                    <input type="range" id="weight-slider" class="calculator-slider weight-slider col-span-6" min="40" max="150" step="0.5" value="75">
-                                    <input type="number" id="weight-input" class="calculator-styled-input col-span-3 w-full" min="40" max="150" step="0.5" value="75.0">
+                                <div class="slider-group slider-container-orange">
+                                     <div class="calculator-slider-label">
+                                        <span>وزن (kg)</span>
+                                        <input type="number" class="calculator-styled-input weight-input" min="40" max="150" step="0.5" value="75.0">
+                                    </div>
+                                    <input type="range" class="calculator-slider weight-slider w-full" min="40" max="150" step="0.5" value="75">
                                 </div>
                             </div>
                         </div>
-                        <!-- Lifestyle & Goals Section -->
+
                         <div class="calculator-input-section">
                             <h3 class="!mb-4"><span>۲</span>سبک زندگی و اهداف</h3>
                             <div class="space-y-4">
@@ -91,11 +106,11 @@ const renderCalculator = () => `
                                 </div>
                             </div>
                         </div>
-
                     </div>
 
-                    <!-- RESULTS -->
+                    <!-- LEFT COLUMN: All Results -->
                     <div id="calculator-results" class="space-y-4">
+                        <h3 class="text-white font-bold text-lg text-center mb-4">نتایج شما</h3>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           ${createGauge('tdee-gauge', 'کالری روزانه')}
                           ${createGauge('bmi-gauge', 'شاخص BMI')}
@@ -350,9 +365,9 @@ const updateCalculatorResults = () => {
     const calculator = document.getElementById('fitness-calculator');
     if (!calculator) return;
 
-    const age = parseInt((calculator.querySelector('#age-slider') as HTMLInputElement).value, 10);
-    const height = parseInt((calculator.querySelector('#height-slider') as HTMLInputElement).value, 10);
-    const weight = parseFloat((calculator.querySelector('#weight-slider') as HTMLInputElement).value);
+    const age = parseInt((calculator.querySelector('.age-slider') as HTMLInputElement).value, 10);
+    const height = parseInt((calculator.querySelector('.height-slider') as HTMLInputElement).value, 10);
+    const weight = parseFloat((calculator.querySelector('.weight-slider') as HTMLInputElement).value);
     const gender = (calculator.querySelector('input[name="gender_calc"]:checked') as HTMLInputElement).value;
     const activityLevel = parseFloat((calculator.querySelector('input[name="activity_level_calc"]:checked') as HTMLInputElement).value);
     const goal = (calculator.querySelector('input[name="goal_calc"]:checked') as HTMLInputElement).value;
@@ -479,6 +494,23 @@ const handleHeaderScroll = () => {
     }
 };
 
+const updateLandingSliderTrack = (slider: HTMLInputElement) => {
+    if (!slider) return;
+    const min = +slider.min || 0;
+    const max = +slider.max || 100;
+    const val = (+slider.value || 0);
+    const percentage = ((val - min) / (max - min)) * 100;
+
+    const parentContainer = slider.closest('[class*="slider-container-"]');
+    let accentColor = 'var(--accent)';
+    if (parentContainer) {
+        if (parentContainer.classList.contains('slider-container-blue')) accentColor = 'var(--admin-accent-blue)';
+        else if (parentContainer.classList.contains('slider-container-green')) accentColor = 'var(--admin-accent-green)';
+        else if (parentContainer.classList.contains('slider-container-orange')) accentColor = 'var(--admin-accent-orange)';
+    }
+    const trackColor = '#334155';
+    slider.style.background = `linear-gradient(to right, ${accentColor} ${percentage}%, ${trackColor} ${percentage}%)`;
+};
 
 export const initLandingPageListeners = () => {
     const root = document.getElementById('app-root');
@@ -499,31 +531,13 @@ export const initLandingPageListeners = () => {
     const calculator = document.getElementById('fitness-calculator');
     if (!calculator) return;
     
-    const updateLandingSliderTrack = (slider: HTMLInputElement) => {
-        if (!slider) return;
-        const min = +slider.min || 0;
-        const max = +slider.max || 100;
-        const val = +slider.value || 0;
-        const percentage = ((val - min) / (max - min)) * 100;
-
-        const parentContainer = slider.closest('[class*="slider-container-"]');
-        let accentColor = 'var(--accent)';
-        if (parentContainer) {
-            if (parentContainer.classList.contains('slider-container-blue')) accentColor = 'var(--admin-accent-blue)';
-            else if (parentContainer.classList.contains('slider-container-green')) accentColor = 'var(--admin-accent-green)';
-            else if (parentContainer.classList.contains('slider-container-orange')) accentColor = 'var(--admin-accent-orange)';
-        }
-        const trackColor = '#334155';
-        slider.style.background = `linear-gradient(to right, ${accentColor} ${percentage}%, ${trackColor} ${percentage}%)`;
-    };
-
     // Sync sliders and number inputs
-    const sliders = calculator.querySelectorAll<HTMLInputElement>('input[type="range"].calculator-slider');
-    sliders.forEach(slider => {
-        const inputId = slider.id.replace('-slider', '-input');
-        const numberInput = calculator.querySelector<HTMLInputElement>(`#${inputId}`);
+    const sliderGroups = calculator.querySelectorAll<HTMLElement>('.slider-group');
+    sliderGroups.forEach(group => {
+        const slider = group.querySelector<HTMLInputElement>('input[type="range"]');
+        const numberInput = group.querySelector<HTMLInputElement>('input[type="number"]');
 
-        if (numberInput) {
+        if (slider && numberInput) {
             const syncAndUpdate = () => {
                 updateLandingSliderTrack(slider);
                 updateCalculatorResults();
@@ -567,9 +581,9 @@ export const initLandingPageListeners = () => {
 
     document.getElementById('get-plan-from-calc-btn')?.addEventListener('click', () => {
         const data = {
-            age: (calculator.querySelector('#age-slider') as HTMLInputElement).value,
-            height: (calculator.querySelector('#height-slider') as HTMLInputElement).value,
-            weight: (calculator.querySelector('#weight-slider') as HTMLInputElement).value,
+            age: (calculator.querySelector('.age-slider') as HTMLInputElement).value,
+            height: (calculator.querySelector('.height-slider') as HTMLInputElement).value,
+            weight: (calculator.querySelector('.weight-slider') as HTMLInputElement).value,
             gender: (calculator.querySelector('input[name="gender_calc"]:checked') as HTMLInputElement).value,
             activityLevel: (calculator.querySelector('input[name="activity_level_calc"]:checked') as HTMLInputElement).value,
             trainingGoal: (calculator.querySelector('input[name="goal_calc"]:checked') as HTMLInputElement).value
@@ -580,6 +594,6 @@ export const initLandingPageListeners = () => {
     });
 
     // Initial calculation and slider track coloring
-    sliders.forEach(updateLandingSliderTrack);
+    calculator.querySelectorAll<HTMLInputElement>('input[type="range"].calculator-slider').forEach(updateLandingSliderTrack);
     updateCalculatorResults();
 };
