@@ -735,42 +735,6 @@
             color: var(--accent);
         }
         
-        /* Gauge Component */
-        .gauge {
-            position: relative;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .gauge-svg {
-            transform: rotate(-90deg);
-        }
-        .gauge-track {
-            fill: none;
-            stroke: var(--bg-tertiary);
-        }
-        .gauge-value {
-            fill: none;
-            stroke-linecap: round;
-        }
-        .gauge-text {
-            position: absolute;
-            inset: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-        }
-        .gauge-number {
-            font-weight: 800;
-        }
-        .gauge-label {
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-            margin-top: -0.25rem;
-        }
-        
         /* --- Notification & Color Coding --- */
         @keyframes pop {
             0% { transform: scale(0.8); }
@@ -1092,6 +1056,13 @@
         /* End New Styles */
 
         /* User Profile Page Enhancements */
+        .profile-field-label {
+            display: block;
+            font-weight: 600;
+            font-size: 0.875rem; /* text-sm */
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
         .highlight-coach-selection {
             border: 2px solid var(--admin-accent-yellow) !important;
             box-shadow: 0 0 8px var(--admin-accent-yellow-transparent-30);
@@ -1108,7 +1079,7 @@
             align-items: center;
             gap: 0.25rem;
         }
-
+        
         /* Custom slider colors */
         .slider-container-blue .range-slider::-webkit-slider-thumb { border-color: var(--admin-accent-blue); }
         .slider-container-blue .range-slider:hover::-webkit-slider-thumb { transform: scale(1.1); }
@@ -1682,12 +1653,28 @@
             color: var(--bg-secondary);
         }
         .metric-card {
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
+            background-color: var(--bg-tertiary);
+            border: 1px solid var(--border-primary);
+            padding: 1rem;
+            border-radius: var(--radius-card);
+            transition: all 0.2s ease 0s;
         }
-        .metric-card .range-slider {
-            margin-top: 0.5rem;
+        .metric-card:hover {
+            border-color: var(--border-secondary);
+        }
+        .metric-card-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+        }
+        .metric-card-value {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--text-primary);
         }
         .advanced-measurements-details summary {
             list-style: none; /* Hide default arrow */
@@ -1696,6 +1683,47 @@
             display: none; /* Hide default arrow for Safari */
         }
 
+        /* --- Modern Profile Gauge --- */
+        .profile-gauge-modern {
+            position: relative;
+            width: 90px;
+            height: 90px;
+            flex-shrink: 0;
+        }
+        .profile-gauge-modern svg {
+            transform: rotate(-90deg);
+        }
+        .profile-gauge-modern .track {
+            fill: none;
+            stroke-width: 10;
+            stroke: var(--bg-tertiary);
+        }
+        .profile-gauge-modern .value {
+            fill: none;
+            stroke-width: 10;
+            stroke-linecap: round;
+            transition: stroke-dashoffset 1s cubic-bezier(0.25, 0.1, 0.25, 1), stroke 0.5s;
+        }
+        .profile-gauge-modern .text-content {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+        .profile-gauge-modern .value-text {
+            font-size: 1.5rem; /* text-2xl */
+            font-weight: 800;
+            color: var(--text-primary);
+        }
+        .profile-gauge-modern .category-text {
+            font-size: 0.75rem; /* text-xs */
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-top: -0.25rem;
+        }
     </style>
 <script type="importmap">
 {

@@ -76,9 +76,7 @@ async function withStore<T>(type: IDBTransactionMode, callback: (store: IDBObjec
     });
 }
 
-// FIX: Export idb helpers for use in other modules
 export const idbGet = <T>(key: IDBValidKey): Promise<T | undefined> => withStore('readonly', store => store.get(key));
-// FIX: Correct return type to Promise<void> to match usage. The result of a put operation is often not needed.
 export const idbSet = (key: IDBValidKey, value: any): Promise<void> => withStore('readwrite', store => store.put(value, key)).then(() => {});
 export const idbDel = (key: IDBValidKey): Promise<void> => withStore('readwrite', store => store.delete(key));
 
@@ -99,7 +97,7 @@ export const saveUsers = async (users: any[]) => {
 
 // --- User Data ---
 export const getUserData = async (username: string): Promise<any> => {
-    const data = await idbGet(`fitgympro_data_${username}`);
+    const data = await idbGet<any>(`fitgympro_data_${username}`);
     return data || {};
 };
 
@@ -136,7 +134,7 @@ export const addActivityLog = async (message: string) => {
 
 // --- Templates ---
 export const getTemplates = async (): Promise<any> => {
-    const templates = await idbGet("fitgympro_templates");
+    const templates = await idbGet<any>("fitgympro_templates");
     return templates || {};
 };
 
@@ -163,7 +161,6 @@ export const deleteTemplate = async (name: string) => {
 
 
 // --- CART & DISCOUNTS ---
-// FIX: Provide explicit generic type to idbGet to prevent it from returning a plain object that doesn't match the expected type.
 export const getCart = async (username: string): Promise<{ items: any[], discountCode: string | null }> => {
     if (!username) return { items: [], discountCode: null };
     const cart = await idbGet<{ items: any[], discountCode: string | null }>(`fitgympro_cart_${username}`);
@@ -185,7 +182,6 @@ export interface Discount {
     value: number;
 }
 
-// FIX: Provide explicit generic type to idbGet to ensure the returned value matches the expected Record type.
 export const getDiscounts = async (): Promise<Record<string, Discount>> => {
     const discounts = await idbGet<Record<string, Discount>>('fitgympro_discounts');
     return discounts || {};
@@ -201,7 +197,6 @@ export const saveDiscounts = async (discounts: any) => {
 };
 
 // --- STORE PLANS ---
-// FIX: Provide explicit generic type to idbGet to ensure the returned value is an array.
 export const getStorePlans = async (): Promise<any[]> => {
     const plans = await idbGet<any[]>("fitgympro_store_plans");
     return plans || [];
@@ -218,7 +213,6 @@ export const saveStorePlans = async (plans: any[]) => {
 
 
 // --- NOTIFICATIONS ---
-// FIX: Provide explicit generic type to idbGet to ensure the returned value matches the expected Record type.
 export const getNotifications = async (username: string): Promise<Record<string, string>> => {
     if (!username) return {};
     const notifications = await idbGet<Record<string, string>>(`fitgympro_notifications_${username}`);
@@ -246,7 +240,6 @@ export const clearAllNotifications = async (username: string) => {
 
 
 // --- CMS Data (Exercises & Supplements) ---
-// FIX: Provide explicit generic type to idbGet to ensure the returned value matches the expected Record type.
 export const getExercisesDB = async (): Promise<Record<string, string[]>> => {
     const db = await idbGet<Record<string, string[]>>("fitgympro_exercises");
     return db || {};
@@ -261,7 +254,6 @@ export const saveExercisesDB = async (db: Record<string, string[]>) => {
     }
 };
 
-// FIX: Provide explicit generic type to idbGet to ensure the returned value matches the expected Record type.
 export const getSupplementsDB = async (): Promise<Record<string, any[]>> => {
     const db = await idbGet<Record<string, any[]>>("fitgympro_supplements");
     return db || {};
@@ -277,7 +269,6 @@ export const saveSupplementsDB = async (db: Record<string, any[]>) => {
 };
 
 // --- MAGAZINE ---
-// FIX: Provide explicit generic type to idbGet to ensure the returned value is an array.
 export const getMagazineArticles = async (): Promise<any[]> => {
     const articles = await idbGet<any[]>("fitgympro_magazine_articles");
     return articles || [];
@@ -294,16 +285,59 @@ export const saveMagazineArticles = async (articles: any[]) => {
 
 
 export const seedCMSData = async () => {
-    const exercises = await idbGet("fitgympro_exercises");
-    if (!exercises || Object.keys(exercises).length === 0) {
-        await saveExercisesDB(initialExerciseDB);
-        await addActivityLog("Initial exercise database was seeded.");
+    // --- Exercises Synchronization ---
+    let exercisesModified = false;
+    const exercises = await idbGet<Record<string, string[]>>("fitgympro_exercises") || {};
+    const exercisesToWrite = JSON.parse(JSON.stringify(exercises)); // Deep copy to avoid modifying the read object
+
+    for (const group in initialExerciseDB) {
+        if (!exercisesToWrite[group]) {
+            exercisesToWrite[group] = [];
+            exercisesModified = true;
+        }
+        const exerciseSet = new Set(exercisesToWrite[group]);
+        const originalSize = exerciseSet.size;
+        initialExerciseDB[group].forEach(ex => exerciseSet.add(ex));
+        if (exerciseSet.size > originalSize) {
+            exercisesToWrite[group] = Array.from(exerciseSet);
+            exercisesModified = true;
+        }
     }
-    const supplements = await idbGet("fitgympro_supplements");
-    if (!supplements || Object.keys(supplements).length === 0) {
-        await saveSupplementsDB(initialSupplementsDB);
-        await addActivityLog("Initial supplement database was seeded.");
+
+    if (exercisesModified) {
+        await saveExercisesDB(exercisesToWrite);
+        await addActivityLog("Exercise database was synchronized.");
     }
+
+    // --- Supplements Synchronization ---
+    let supplementsModified = false;
+    const supplements = await idbGet<Record<string, any[]>>("fitgympro_supplements") || {};
+    const supplementsToWrite = JSON.parse(JSON.stringify(supplements));
+
+    for (const category in initialSupplementsDB) {
+        if (!supplementsToWrite[category]) {
+            supplementsToWrite[category] = [];
+            supplementsModified = true;
+        }
+        const supplementMap = new Map(supplementsToWrite[category].map(s => [s.name, s]));
+        const originalSize = supplementMap.size;
+        initialSupplementsDB[category].forEach(sup => {
+            if (!supplementMap.has(sup.name)) {
+                supplementMap.set(sup.name, sup);
+            }
+        });
+        if (supplementMap.size > originalSize) {
+            supplementsToWrite[category] = Array.from(supplementMap.values());
+            supplementsModified = true;
+        }
+    }
+
+    if (supplementsModified) {
+        await saveSupplementsDB(supplementsToWrite);
+        await addActivityLog("Supplement database was synchronized.");
+    }
+
+    // --- Magazine Articles Seeding (only if empty) ---
     const articles = await getMagazineArticles();
     if (articles.length === 0) {
         const seedArticles = [
@@ -313,7 +347,8 @@ export const seedCMSData = async () => {
                 category: "تغذیه و عضله‌سازی",
                 imageUrl: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?q=80&w=2070&auto=format&fit=crop",
                 content: "برای عضله‌سازی موثر، باید روی چند اصل کلیدی تمرکز کنید. اول، دریافت پروتئین کافی. پروتئین واحد سازنده عضلات است و باید روزانه حدود ۱.۶ تا ۲.۲ گرم به ازای هر کیلوگرم وزن بدن مصرف کنید. دوم، مازاد کالری کنترل شده. برای ساخت عضله به انرژی نیاز دارید، اما مازاد بیش از حد منجر به افزایش چربی می‌شود. حدود ۳۰۰-۵۰۰ کالری بیشتر از کالری نگهداری روزانه خود هدف‌گذاری کنید...",
-                publishDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
+                publishDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+                author: 'admin10186'
             },
             {
                 id: `article_${Date.now()}_2`,
@@ -321,7 +356,8 @@ export const seedCMSData = async () => {
                 category: "هوازی و کاهش وزن",
                 imageUrl: "https://images.unsplash.com/photo-1549060279-7e168fcee0c2?q=80&w=2070&auto=format&fit=crop",
                 content: "تمرینات هوازی یا کاردیو بخش مهمی از هر برنامه کاهش وزن هستند. اما کدام نوع بهتر است؟ تمرینات اینتروال با شدت بالا (HIIT) مانند دویدن‌های سرعتی کوتاه، در زمان کمتر کالری بیشتری می‌سوزانند و متابولیسم را تا ساعت‌ها بالا نگه می‌دارند. از طرف دیگر، تمرینات با شدت یکنواخت و طولانی (LISS) مانند پیاده‌روی سریع یا دوچرخه‌سواری، فشار کمتری به مفاصل وارد کرده و برای ریکاوری بهتر هستند. بهترین رویکرد، ترکیبی از هر دو است.",
-                publishDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString()
+                publishDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+                author: 'admin10186'
             },
             {
                 id: `article_${Date.now()}_3`,
@@ -329,7 +365,8 @@ export const seedCMSData = async () => {
                 category: "علم تمرین",
                 imageUrl: "https://images.unsplash.com/photo-1581009137042-c552e485697a?q=80&w=2070&auto=format&fit=crop",
                 content: "شاید شنیده باشید که مربیان می‌گویند 'روی عضله‌ای که تمرین می‌دهی تمرکز کن'، اما این فقط یک عبارت انگیزشی نیست. ارتباط ذهن و عضله یک مفهوم علمی است که می‌تواند نتایج تمرین شما را به طرز چشمگیری بهبود ببخشد. وقتی شما به صورت آگاهانه روی انقباض یک عضله خاص تمرکز می‌کنید، سیگنال‌های عصبی قوی‌تری از مغز به آن عضله ارسال می‌شود. این امر منجر به فعال‌سازی تعداد بیشتری از فیبرهای عضلانی شده و در نتیجه، تحریک بیشتری برای رشد ایجاد می‌کند. برای بهبود این ارتباط، سعی کنید حرکات را با وزنه‌های سبک‌تر و به صورت آهسته و کنترل شده انجام دهید، در بالاترین نقطه انقباض عضله را برای لحظه‌ای منقبض نگه دارید و چشمان خود را ببندید تا بهتر بتوانید روی حس عضله تمرکز کنید.",
-                publishDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+                publishDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+                author: 'admin10186'
             },
             {
                 id: `article_${Date.now()}_4`,
@@ -337,7 +374,8 @@ export const seedCMSData = async () => {
                 category: "تغذیه و رژیم",
                 imageUrl: "https://images.unsplash.com/photo-1543353071-873f67a48e03?q=80&w=2070&auto=format&fit=crop",
                 content: "تغذیه صحیح قبل و بعد از تمرین به اندازه خود تمرین اهمیت دارد. اجتناب از این ۵ اشتباه رایج می‌تواند عملکرد و ریکاوری شما را متحول کند: ۱. مصرف چربی زیاد قبل از تمرین: چربی‌ها هضم را کند کرده و ممکن است باعث احساس سنگینی شوند. ۲. تمرین با معده خالی (در همه موارد): برای تمرینات شدید، کربوهیدرات‌های زود هضم برای تامین انرژی ضروری هستند. ۳. تاخیر در مصرف پروتئین بعد از تمرین: عضلات شما پس از تمرین برای ترمیم به پروتئین نیاز دارند؛ سعی کنید در یک بازه ۱-۲ ساعته پروتئین مصرف کنید. ۴. عدم نوشیدن آب کافی: دهیدراتاسیون یا کم‌آبی می‌تواند به شدت عملکرد شما را کاهش دهد. ۵. نادیده گرفتن کربوهیدرات بعد از تمرین: کربوهیدرات‌ها به بازسازی ذخایر گلیکوژن عضلات و تسریع ریکاوری کمک می‌کنند. یک وعده متعادل شامل پروتئین و کربوهیدرات بهترین گزینه است.",
-                publishDate: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString()
+                publishDate: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
+                author: 'admin10186'
             },
             {
                 id: `article_${Date.now()}_5`,
@@ -345,7 +383,8 @@ export const seedCMSData = async () => {
                 category: "روانشناسی و انگیزه",
                 imageUrl: "https://images.unsplash.com/photo-1517836357463-d257692634ce?q=80&w=2070&auto=format&fit=crop",
                 content: "انگیزه مانند یک جرقه است؛ روشن می‌شود، اما ممکن است به سرعت خاموش شود. در مقابل، انضباط مانند موتوری است که حتی در نبود جرقه اولیه، شما را به جلو می‌راند. همه ما روزهایی را تجربه می‌کنیم که حس تمرین کردن نداریم. در این روزها، تکیه بر انضباط و عادت‌هاست که تفاوت را رقم می‌زند. برای ساختن انضباط، یک برنامه ورزشی مشخص برای خود تعیین کنید و به آن پایبند باشید، حتی اگر فقط ۱۰ دقیقه تمرین کنید. موفقیت‌های کوچک را جشن بگیرید و به جای تمرکز بر نتیجه نهایی، روی فرآیند و هویت خود به عنوان یک 'فرد ورزشکار' تمرکز کنید. به یاد داشته باشید که ثبات و استمرار، حتی با شدت کمتر، همیشه از تمرینات شدید و پراکنده بهتر است.",
-                publishDate: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString()
+                publishDate: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
+                author: 'admin10186'
             },
             {
                 id: `article_${Date.now()}_6`,
@@ -353,7 +392,8 @@ export const seedCMSData = async () => {
                 category: "مکمل‌ها",
                 imageUrl: "https://images.unsplash.com/photo-1599599810694-b5b37304c847?q=80&w=2070&auto=format&fit=crop",
                 content: "کراتین یکی از پرتحقیق‌ترین و موثرترین مکمل‌های ورزشی در جهان است، اما شایعات زیادی پیرامون آن وجود دارد. کراتین به طور طبیعی در بدن یافت می‌شود و به بازسازی سریع انرژی (ATP) در حین تمرینات کوتاه و شدید کمک می‌کند. مصرف مکمل کراتین (معمولاً کراتین مونوهیدرات) می‌تواند به افزایش قدرت، توان و حجم عضلانی کمک کند. برخلاف باورهای غلط، تحقیقات گسترده نشان داده‌اند که مصرف کراتین در دوزهای استاندارد (۳-۵ گرم در روز) برای افراد سالم ایمن است و به کلیه‌ها آسیب نمی‌رساند. نیازی به دوره 'بارگیری' نیست و می‌توانید آن را هر روز، در هر زمانی از روز مصرف کنید. کراتین یک مکمل جادویی نیست، اما ابزاری قدرتمند برای بهبود عملکرد در کنار تمرین و تغذیه مناسب است.",
-                publishDate: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString()
+                publishDate: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString(),
+                author: 'admin10186'
             }
         ];
         await saveMagazineArticles(seedArticles);

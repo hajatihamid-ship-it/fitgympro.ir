@@ -1,4 +1,4 @@
-import { getTemplates, saveTemplate, deleteTemplate, getUsers, getUserData, saveUserData, getNotifications, setNotification, clearNotification, getExercisesDB, getSupplementsDB } from '../services/storage';
+import { getTemplates, saveTemplate, deleteTemplate, getUsers, getUserData, saveUserData, getNotifications, setNotification, clearNotification, getExercisesDB, getSupplementsDB, getMagazineArticles, saveMagazineArticles } from '../services/storage';
 import { showToast, updateSliderTrack, openModal, closeModal, exportElement, sanitizeHTML, hexToRgba } from '../utils/dom';
 import { getLatestPurchase, timeAgo, getLastActivity } from '../utils/helpers';
 import { generateWorkoutPlan, generateSupplementPlan, generateNutritionPlan, generateFoodReplacements, generateCoachingInsight, generateExerciseSuggestion } from '../services/gemini';
@@ -15,16 +15,25 @@ let currentNutritionPlanObject: any | null = null;
 let isEditingRecentProgram = false;
 let activeReplacementTarget: HTMLLIElement | null = null;
 
-export function renderCoachDashboard(currentUser: string, userData: any) {
+export function renderCoachDashboard(currentUser: string, userData: any, coachTier: string) {
     const name = userData.step1?.clientName || currentUser;
-    const navItems = [
+    
+    let navItems = [
         { target: 'dashboard-content', icon: 'layout-dashboard', label: 'داشبورد' },
         { target: 'students-content', icon: 'users', label: 'شاگردان' },
         { target: 'chat-content', icon: 'message-square', label: 'گفتگو' },
         { target: 'program-builder-content', icon: 'file-plus-2', label: 'برنامه‌ساز' },
         { target: 'templates-content', icon: 'save', label: 'الگوها' },
-        { target: 'profile-content', icon: 'user-cog', label: 'پروفایل' }
     ];
+
+    if (coachTier === 'pro' || coachTier === 'head_coach') {
+        navItems.push({ target: 'magazine-content', icon: 'book-open-text', label: 'مجله' });
+    }
+    if (coachTier === 'head_coach') {
+        navItems.push({ target: 'team-content', icon: 'users-2', label: 'تیم من' });
+    }
+    
+    navItems.push({ target: 'profile-content', icon: 'user-cog', label: 'پروفایل' });
     
     return `
     <div id="coach-dashboard-container" class="lg:flex h-screen bg-bg-primary transition-opacity duration-500 opacity-0">
@@ -81,6 +90,8 @@ export function renderCoachDashboard(currentUser: string, userData: any) {
             <div id="chat-content" class="coach-tab-content hidden"></div>
             <div id="program-builder-content" class="coach-tab-content hidden"></div>
             <div id="templates-content" class="coach-tab-content hidden"></div>
+            <div id="magazine-content" class="coach-tab-content hidden"></div>
+            <div id="team-content" class="coach-tab-content hidden"></div>
             <div id="profile-content" class="coach-tab-content hidden"></div>
             
             <!-- Modals for Coach Dashboard -->
@@ -233,6 +244,23 @@ export function renderCoachDashboard(currentUser: string, userData: any) {
                         <button id="just-delete-btn" class="secondary-button !text-red-accent">فقط حذف کن</button>
                     </div>
                 </div>
+            </div>
+            <div id="magazine-article-modal" class="modal fixed inset-0 bg-black/60 z-[100] hidden opacity-0 pointer-events-none transition-opacity duration-300 flex items-center justify-center p-4">
+                <form id="magazine-article-form" class="card w-full max-w-2xl transform scale-95 transition-transform duration-300 relative max-h-[90vh] flex flex-col">
+                     <div class="flex justify-between items-center p-4 border-b border-border-primary flex-shrink-0">
+                        <h2 id="magazine-article-modal-title" class="font-bold text-xl">افزودن مقاله جدید</h2>
+                        <button type="button" class="close-modal-btn secondary-button !p-2 rounded-full"><i data-lucide="x"></i></button>
+                    </div>
+                    <div class="p-6 space-y-4 overflow-y-auto">
+                        <div class="input-group"><input type="text" name="title" class="input-field w-full" placeholder=" " required><label class="input-label">عنوان مقاله</label></div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div class="input-group"><input type="text" name="category" class="input-field w-full" placeholder=" " required><label class="input-label">دسته بندی</label></div>
+                            <div class="input-group"><input type="url" name="imageUrl" class="input-field w-full" placeholder=" "><label class="input-label">URL تصویر</label></div>
+                        </div>
+                        <div class="input-group"><textarea name="content" class="input-field w-full min-h-[200px]" placeholder=" " required></textarea><label class="input-label">محتوای مقاله</label></div>
+                    </div>
+                    <div class="p-4 border-t border-border-primary flex-shrink-0"><button type="submit" class="primary-button w-full">ذخیره مقاله</button></div>
+                </form>
             </div>
         </main>
     </div>
@@ -696,12 +724,12 @@ const openStudentProfileModal = async (studentId: string, coachUsername: string)
                     </div>
                     ${userData.step1?.limitations ? `
                     <div class="mt-4 pt-4 border-t border-border-primary">
-                        <h5 class="font-semibold text-sm mb-1">محدودیت‌ها</h5>
+                        <h5 class="font-semibold text-sm mb-1 text-orange-500 flex items-center gap-2"><i data-lucide="shield-alert" class="w-4 h-4"></i>محدودیت‌ها</h5>
                         <p class="text-xs text-text-secondary whitespace-pre-wrap">${sanitizeHTML(userData.step1.limitations)}</p>
                     </div>` : ''}
                     ${userData.step1?.coachNotes ? `
                     <div class="mt-4 pt-4 border-t border-border-primary">
-                        <h5 class="font-semibold text-sm mb-1">یادداشت‌های شما</h5>
+                        <h5 class="font-semibold text-sm mb-1 text-blue-500 flex items-center gap-2"><i data-lucide="notebook-pen" class="w-4 h-4"></i>یادداشت‌های شما</h5>
                         <p class="text-xs text-text-secondary whitespace-pre-wrap">${sanitizeHTML(userData.step1.coachNotes)}</p>
                     </div>` : ''}
                 </div>
@@ -1162,8 +1190,19 @@ const renderStudentInfoForBuilder = async (studentId: string, coachUsername: str
         `;
     };
 
+    const limitationsHtml = step1.limitations ? `
+        <div class="info-card !bg-admin-accent-orange/10 !border-admin-accent-orange p-4 my-6 flex items-start gap-3">
+            <i data-lucide="shield-alert" class="w-6 h-6 text-admin-accent-orange flex-shrink-0 mt-1"></i>
+            <div>
+                <h4 class="font-bold text-orange-600 dark:text-orange-400">محدودیت‌های ثبت شده</h4>
+                <p class="text-sm text-orange-700 dark:text-orange-300 whitespace-pre-wrap">${sanitizeHTML(step1.limitations)}</p>
+            </div>
+        </div>
+    ` : '';
+
     infoDisplay.innerHTML = `
         <div class="bg-bg-secondary rounded-xl p-6">
+            ${limitationsHtml}
             <div class="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
                 <div class="space-y-4">
                      <h3 class="font-bold text-xl border-b border-border-primary pb-2 mb-2">اطلاعات فردی</h3>
@@ -1557,14 +1596,15 @@ const getLastActivityDate = (userData: any): string => {
 const renderDashboardTab = async (currentUser: string, coachData: any) => {
     const students = await getCoachAllStudents(currentUser);
     const needsPlanStudents = await getStudentsNeedingAttention(students);
+    const name = coachData.step1?.clientName || currentUser;
 
     const monthlyRevenue = (students.length * 150000 * 0.7).toLocaleString('fa-IR');
 
     const kpiCards = [
         { title: 'شاگردان فعال', value: students.length, unit: '', icon: 'users', color: 'admin-accent-blue' },
-        { title: 'در انتظار برنامه', value: needsPlanStudents.length, unit: '', icon: 'alert-circle', color: 'admin-accent-orange' },
-        { title: 'امتیاز شما', value: coachData.performance?.rating || 'N/A', unit: '/ ۵', icon: 'star', color: 'admin-accent-green' },
-        { title: 'درآمد تخمینی ماهانه', value: monthlyRevenue, unit: 'تومان', icon: 'trending-up', color: 'admin-accent-pink' }
+        { title: 'درآمد تخمینی ماهانه', value: monthlyRevenue, unit: 'تومان', icon: 'trending-up', color: 'admin-accent-pink' },
+        { title: 'امتیاز شما', value: coachData.performance?.rating?.toFixed(1) || 'N/A', unit: '/ ۵', icon: 'star', color: 'admin-accent-green' },
+        { title: 'شاگردان در انتظار', value: needsPlanStudents.length, unit: '', icon: 'alert-circle', color: 'admin-accent-orange' }
     ];
 
     const container = document.getElementById('dashboard-content');
@@ -1572,6 +1612,11 @@ const renderDashboardTab = async (currentUser: string, coachData: any) => {
 
     container.innerHTML = `
         <div class="space-y-6 animate-fade-in">
+            <!-- Header and KPIs -->
+            <div class="space-y-2">
+                <h2 class="text-2xl font-bold">خوش آمدید، ${name}!</h2>
+                <p class="text-text-secondary">خلاصه‌ای از فعالیت‌های امروز شما.</p>
+            </div>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 ${kpiCards.map((kpi, index) => `
                     <div class="stat-card animate-fade-in-up" style="animation-delay: ${index * 100}ms;">
@@ -1591,13 +1636,51 @@ const renderDashboardTab = async (currentUser: string, coachData: any) => {
                 `).join('')}
             </div>
 
+            <!-- Main Grid -->
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div class="lg:col-span-2 admin-chart-container h-96 animate-fade-in-up" style="animation-delay: 400ms;">
-                    <h3 class="font-bold mb-4">رشد شاگردان (۶ ماه اخیر)</h3>
-                    <canvas id="coach-growth-chart"></canvas>
+                <!-- Left Column -->
+                <div class="lg:col-span-2 space-y-6">
+                    <!-- Needs Attention Card -->
+                    <div class="card p-6 animate-fade-in-up" style="animation-delay: 400ms;">
+                        <h3 class="font-bold text-lg mb-4">نیازمند توجه</h3>
+                        <div id="dashboard-needs-attention-list" class="space-y-3">
+                            ${needsPlanStudents.length > 0 ? needsPlanStudents.map(student => {
+                                const studentData = student.userData;
+                                const name = studentData.step1?.clientName || student.username;
+                                const latestPurchase = getLatestPurchase(studentData);
+                                const avatarUrl = studentData.profile?.avatar;
+                                const avatarHtml = avatarUrl
+                                    ? `<img src="${avatarUrl}" alt="${name}" class="w-10 h-10 rounded-full object-cover">`
+                                    : `<div class="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center font-bold text-white" style="background-color: ${getColorForName(name)};">
+                                        ${name.substring(0, 1).toUpperCase()}
+                                       </div>`;
+
+                                return `
+                                    <div class="flex justify-between items-center p-3 bg-bg-tertiary rounded-lg transition-all hover:bg-bg-tertiary/70">
+                                        <div class="flex items-center gap-3">
+                                            ${avatarHtml}
+                                            <div>
+                                                <p class="font-semibold">${name}</p>
+                                                <p class="text-xs text-text-secondary">${latestPurchase?.planName || ''} - ${timeAgo(latestPurchase.purchaseDate)}</p>
+                                            </div>
+                                        </div>
+                                        <button class="primary-button !py-1 !px-2 !text-xs" data-action="create-program" data-username="${student.username}">ایجاد برنامه</button>
+                                    </div>
+                                `;
+                            }).join('') : '<p class="text-text-secondary text-center">هیچ شاگردی منتظر برنامه نیست.</p>'}
+                        </div>
+                    </div>
+                    <!-- Growth Chart Card -->
+                    <div class="admin-chart-container h-96 animate-fade-in-up" style="animation-delay: 600ms;">
+                        <h3 class="font-bold mb-4">رشد شاگردان (۶ ماه اخیر)</h3>
+                        <canvas id="coach-growth-chart"></canvas>
+                    </div>
                 </div>
-                <div class="space-y-6 animate-fade-in-up" style="animation-delay: 500ms;">
-                    <div class="card p-6">
+
+                <!-- Right Column -->
+                <div class="lg:col-span-1 space-y-6">
+                    <!-- AI Insight Card -->
+                    <div class="card p-6 animate-fade-in-up" style="animation-delay: 500ms;">
                         <div class="flex items-center gap-3 mb-3">
                             <i data-lucide="sparkles" class="w-6 h-6 text-accent"></i>
                             <h3 class="font-bold text-lg">پیشنهاد هوشمند</h3>
@@ -1605,36 +1688,33 @@ const renderDashboardTab = async (currentUser: string, coachData: any) => {
                         <p id="ai-insight-text" class="text-text-secondary text-sm min-h-[60px]">برای دریافت یک پیشنهاد کاربردی جهت بهبود کسب و کار خود، کلیک کنید.</p>
                         <button id="get-ai-insight-btn" class="secondary-button w-full mt-4 !text-sm">دریافت پیشنهاد</button>
                     </div>
-                </div>
-            </div>
-            
-            <div class="card p-6 animate-fade-in-up" style="animation-delay: 600ms;">
-                <h3 class="font-bold text-lg mb-4">شاگردان در انتظار برنامه</h3>
-                <div id="dashboard-needs-attention-list" class="space-y-3">
-                    ${needsPlanStudents.length > 0 ? needsPlanStudents.map(student => {
-                        const studentData = student.userData;
-                        const name = studentData.step1?.clientName || student.username;
-                        const latestPurchase = getLatestPurchase(studentData);
-                        const avatarUrl = studentData.profile?.avatar;
-                        const avatarHtml = avatarUrl
-                            ? `<img src="${avatarUrl}" alt="${name}" class="w-10 h-10 rounded-full object-cover">`
-                            : `<div class="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center font-bold text-white" style="background-color: ${getColorForName(name)};">
-                                ${name.substring(0, 1).toUpperCase()}
-                               </div>`;
-
-                        return `
-                            <div class="flex justify-between items-center p-3 bg-bg-tertiary rounded-lg">
-                                <div class="flex items-center gap-3">
-                                    ${avatarHtml}
-                                    <div>
-                                        <p class="font-semibold">${name}</p>
-                                        <p class="text-xs text-text-secondary">${latestPurchase?.planName || ''} - ${timeAgo(latestPurchase.purchaseDate)}</p>
-                                    </div>
+                    <!-- Performance Snapshot Card -->
+                    <div class="card p-6 animate-fade-in-up" style="animation-delay: 700ms;">
+                        <h3 class="font-bold text-lg mb-4">عملکرد شما</h3>
+                        <div class="space-y-5">
+                            <div class="flex items-center">
+                                <div class="icon-container !w-10 !h-10 !rounded-xl" style="background-color: var(--admin-accent-green);"><i data-lucide="award" class="w-5 h-5 text-white"></i></div>
+                                <div class="flex-grow mr-3">
+                                    <p class="font-semibold text-sm">نرخ نگهداری</p>
+                                    <p class="text-xs text-text-secondary">${coachData.performance?.retentionRate || 0}% مشتریان شما باقی مانده‌اند</p>
                                 </div>
-                                <button class="primary-button !py-1 !px-2 !text-xs" data-action="create-program" data-username="${student.username}">ایجاد برنامه</button>
                             </div>
-                        `;
-                    }).join('') : '<p class="text-text-secondary text-center">هیچ شاگردی منتظر برنامه نیست.</p>'}
+                            <div class="flex items-center">
+                                <div class="icon-container !w-10 !h-10 !rounded-xl" style="background-color: var(--admin-accent-yellow);"><i data-lucide="smile" class="w-5 h-5 text-white"></i></div>
+                                <div class="flex-grow mr-3">
+                                    <p class="font-semibold text-sm">شاخص NPS</p>
+                                    <p class="text-xs text-text-secondary">امتیاز ${coachData.performance?.nps || 0} از 100</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center">
+                                <div class="icon-container !w-10 !h-10 !rounded-xl" style="background-color: var(--admin-accent-blue);"><i data-lucide="clock" class="w-5 h-5 text-white"></i></div>
+                                <div class="flex-grow mr-3">
+                                    <p class="font-semibold text-sm">میانگین زمان تحویل برنامه</p>
+                                    <p class="text-xs text-text-secondary">${coachData.performance?.avgProgramDeliveryHours || 0} ساعت</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -2122,6 +2202,7 @@ const renderStudentCards = async (students: any[], containerId: string) => {
         const streak = calculateWorkoutStreak(studentData.workoutHistory);
         const weightChange = getWeightChange(studentData);
         const needsPlan = !student.isLocal && latestPurchase && latestPurchase.fulfilled === false;
+        const hasLimitations = !!studentData.step1?.limitations;
 
         const trendIcon = weightChange.trend === 'up' ? 'trending-up' : 'trending-down';
         const trendColor = weightChange.trend === 'up' ? 'text-green-500' : 'text-red-500';
@@ -2170,7 +2251,10 @@ const renderStudentCards = async (students: any[], containerId: string) => {
                 <div class="flex items-start gap-4">
                     ${avatarHtml}
                     <div class="flex-grow overflow-hidden">
-                        <h3 class="font-bold text-xl truncate">${name}</h3>
+                        <h3 class="font-bold text-xl truncate flex items-center gap-2">
+                            ${name}
+                            ${hasLimitations ? `<i data-lucide="shield-alert" class="w-4 h-4 text-orange-500 flex-shrink-0" title="دارای محدودیت"></i>` : ''}
+                        </h3>
                         <p class="text-sm text-text-secondary truncate">${goal}</p>
                     </div>
                 </div>
@@ -2241,7 +2325,7 @@ const addSupplementRowToDOM = async (supplement: any, aiSuggestion: { dosage?: s
     window.lucide?.createIcons();
 };
 
-export async function initCoachDashboard(currentUser: string, handleLogout: () => void, handleGoToHome: () => void) {
+export async function initCoachDashboard(currentUser: string, handleLogout: () => void, handleGoToHome: () => void, coachTier: string) {
     const mainContainer = document.getElementById('coach-dashboard-container');
     if (!mainContainer) return;
 
@@ -2255,6 +2339,8 @@ export async function initCoachDashboard(currentUser: string, handleLogout: () =
         'chat-content': { title: 'گفتگو', subtitle: 'با شاگردان خود در ارتباط باشید.' },
         'program-builder-content': { title: 'برنامه‌ساز', subtitle: 'برنامه‌های تمرینی و غذایی جدید بسازید.' },
         'templates-content': { title: 'الگوها', subtitle: 'الگوهای برنامه خود را مدیریت کنید.' },
+        'magazine-content': { title: 'مجله', subtitle: 'مقالات خود را مدیریت کنید.' },
+        'team-content': { title: 'تیم من', subtitle: 'عملکرد مربیان تیم خود را مشاهده کنید.' },
         'profile-content': { title: 'پروفایل', subtitle: 'اطلاعات و پروفایل عمومی خود را ویرایش کنید.' }
     };
 
@@ -2312,6 +2398,12 @@ export async function initCoachDashboard(currentUser: string, handleLogout: () =
                         </div>`;
                     await renderTemplatesTab();
                 }
+                break;
+            case 'magazine-content':
+                await renderCoachMagazineTab(currentUser);
+                break;
+            case 'team-content':
+                await renderCoachTeamTab(currentUser);
                 break;
             case 'profile-content':
                 const coachData = await getUserData(currentUser);
@@ -2428,6 +2520,28 @@ export async function initCoachDashboard(currentUser: string, handleLogout: () =
                         await renderTemplatesTab();
                     }
                     break;
+                case 'add-article': await openArticleModal(null, currentUser); break;
+                case 'edit-article': {
+                    const articleId = actionBtn.dataset.id;
+                    if (articleId) await openArticleModal(articleId, currentUser);
+                    break;
+                }
+                case 'delete-article': {
+                    const articleId = actionBtn.dataset.id;
+                    if (articleId && confirm('آیا از حذف این مقاله مطمئن هستید؟')) {
+                        let articles = await getMagazineArticles();
+                        // Coaches can only delete their own articles
+                        const articleToDelete = articles.find(a => a.id === articleId && a.author === currentUser);
+                        if (articleToDelete) {
+                            await saveMagazineArticles(articles.filter(a => a.id !== articleId));
+                            showToast('مقاله حذف شد.', 'success');
+                            await renderCoachMagazineTab(currentUser);
+                        } else {
+                            showToast('شما اجازه حذف این مقاله را ندارید.', 'error');
+                        }
+                    }
+                    break;
+                }
                 case 'suggest-exercise-ai':
                     if (!activeStudentUsername) {
                         showToast("ابتدا یک شاگرد را انتخاب کنید.", "error");
@@ -2778,6 +2892,81 @@ export async function initCoachDashboard(currentUser: string, handleLogout: () =
             }
         }
     });
+    
+    mainContainer.addEventListener('submit', async (e: Event) => {
+        const form = e.target as HTMLFormElement;
+        if (form.id === 'magazine-article-form') {
+             e.preventDefault();
+            const formData = new FormData(form);
+            const editingId = form.dataset.editingId;
+            const articleData = {
+                id: editingId || `article_${Date.now()}_${currentUser}`,
+                title: formData.get('title') as string,
+                category: formData.get('category') as string,
+                imageUrl: formData.get('imageUrl') as string,
+                content: formData.get('content') as string,
+                publishDate: new Date().toISOString(),
+                author: currentUser
+            };
+            let articles = await getMagazineArticles();
+            if (editingId) {
+                const index = articles.findIndex(a => a.id === editingId && a.author === currentUser);
+                if (index > -1) articles[index] = { ...articles[index], ...articleData };
+            } else {
+                articles.unshift(articleData);
+            }
+            await saveMagazineArticles(articles);
+            showToast(`مقاله با موفقیت ${editingId ? 'ویرایش' : 'ذخیره'} شد.`, 'success');
+            closeModal(document.getElementById('magazine-article-modal'));
+            await renderCoachMagazineTab(currentUser);
+        }
+        if (form.id === 'local-client-form') {
+            e.preventDefault();
+            const editingId = form.dataset.editingId;
+            const formData = new FormData(form);
+            const studentData = {
+                clientName: formData.get('clientName') as string,
+                age: formData.get('age') as string,
+                height: formData.get('height') as string,
+                weight: formData.get('weight') as string,
+                gender: formData.get('gender') as string,
+                contact: formData.get('contact') as string,
+                trainingGoal: formData.get('trainingGoal') as string,
+                trainingDays: parseInt(formData.get('trainingDays') as string, 10),
+                activityLevel: parseFloat(formData.get('activityLevel') as string),
+                experienceLevel: formData.get('experienceLevel') as string,
+                limitations: formData.get('limitations') as string,
+            };
+            const coachNotes = formData.get('coachNotes') as string;
+            
+            const coachData = await getUserData(currentUser);
+            if (!coachData.localStudents) coachData.localStudents = [];
+
+            if (editingId) {
+                const index = coachData.localStudents.findIndex((s:any) => s.id === editingId);
+                if (index > -1) {
+                    coachData.localStudents[index].step1 = studentData;
+                    coachData.localStudents[index].coachNotes = coachNotes;
+                }
+            } else {
+                coachData.localStudents.push({
+                    id: `local_${Date.now()}`,
+                    joinDate: new Date().toISOString(),
+                    step1: studentData,
+                    coachNotes: coachNotes
+                });
+            }
+            
+            await saveUserData(currentUser, coachData);
+            showToast(`شاگرد با موفقیت ${editingId ? 'ویرایش' : 'ذخیره'} شد.`, 'success');
+            closeModal(document.getElementById('local-client-modal'));
+            const studentsTab = document.querySelector<HTMLElement>('.coach-nav-link[data-target="students-content"]');
+            if (studentsTab?.classList.contains('active-nav-link')) {
+                await renderStudentsTab(currentUser);
+            }
+        }
+    });
+
 
     const defaultTab = mainContainer.querySelector<HTMLElement>('.coach-nav-link');
     if(defaultTab) await switchTab(defaultTab);
@@ -2927,6 +3116,119 @@ const openLocalClientModalForEdit = async (studentId: string | null, coachUserna
         }
     } else {
         title.textContent = 'افزودن شاگرد حضوری';
+    }
+    openModal(modal);
+};
+
+const renderCoachMagazineTab = async (currentUser: string) => {
+    const container = document.getElementById('magazine-content');
+    if (!container) return;
+
+    const allArticles = await getMagazineArticles();
+    const myArticles = allArticles.filter(a => a.author === currentUser);
+
+    container.innerHTML = `
+        <div class="card p-4">
+            <div class="flex justify-between items-center mb-4">
+                <div>
+                    <h3 class="font-bold text-lg">مدیریت مقالات شما</h3>
+                    <p class="text-text-secondary text-sm">مقالاتی که می‌نویسید در مجله عمومی سایت نمایش داده می‌شود.</p>
+                </div>
+                <button data-action="add-article" class="primary-button flex items-center gap-2"><i data-lucide="plus"></i> افزودن مقاله</button>
+            </div>
+            <div id="coach-articles-list" class="space-y-3">
+                ${myArticles.length > 0 ? myArticles.map((article: any) => `
+                    <div class="p-4 border border-border-primary rounded-lg flex items-center justify-between gap-4">
+                       <div class="flex-shrink-0">
+                            <img src="${article.imageUrl || 'https://via.placeholder.com/100x80'}" alt="${article.title}" class="w-24 h-20 object-cover rounded-md">
+                       </div>
+                       <div class="flex-grow">
+                         <p class="font-bold">${article.title}</p>
+                         <p class="text-sm text-text-secondary">${article.category} - منتشر شده در: ${new Date(article.publishDate).toLocaleDateString('fa-IR')}</p>
+                       </div>
+                       <div class="flex items-center gap-2 flex-shrink-0">
+                            <button class="secondary-button !p-2" data-action="edit-article" data-id="${article.id}"><i data-lucide="edit-3" class="w-4 h-4 pointer-events-none"></i></button>
+                            <button class="secondary-button !p-2 text-red-accent" data-action="delete-article" data-id="${article.id}"><i data-lucide="trash-2" class="w-4 h-4 pointer-events-none"></i></button>
+                       </div>
+                    </div>
+                `).join('') : '<p class="text-text-secondary text-center p-8">شما هنوز مقاله‌ای ثبت نکرده‌اید.</p>'}
+            </div>
+        </div>
+    `;
+    window.lucide?.createIcons();
+};
+
+const renderCoachTeamTab = async (currentUser: string) => {
+    const container = document.getElementById('team-content');
+    if (!container) return;
+
+    const allUsers = await getUsers();
+    const teamMembers = allUsers.filter(u => u.headCoach === currentUser);
+
+    if (teamMembers.length === 0) {
+        container.innerHTML = `<div class="card p-8 text-center text-text-secondary">هیچ مربی در تیم شما ثبت نشده است.</div>`;
+        return;
+    }
+
+    const teamDetailsPromises = teamMembers.map(async (member: any) => {
+        const memberData = await getUserData(member.username);
+        const allStudentsForMember = await getCoachAllStudents(member.username);
+        return {
+            ...member,
+            name: memberData.step1?.clientName || member.username,
+            avatar: memberData.profile?.avatar,
+            studentCount: allStudentsForMember.length,
+        };
+    });
+    const teamDetails = await Promise.all(teamDetailsPromises);
+
+    container.innerHTML = `
+        <div class="card p-4">
+            <h3 class="font-bold text-lg mb-4">اعضای تیم شما</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                ${teamDetails.map(member => `
+                    <div class="card !shadow-none border border-border-primary p-4 flex items-center gap-4">
+                        ${member.avatar ?
+                            `<img src="${member.avatar}" class="w-12 h-12 rounded-full object-cover">` :
+                            `<div class="w-12 h-12 rounded-full bg-bg-tertiary flex items-center justify-center font-bold">${member.name.charAt(0)}</div>`
+                        }
+                        <div>
+                            <p class="font-bold">${member.name}</p>
+                            <p class="text-sm text-text-secondary">${member.studentCount} شاگرد</p>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `;
+    window.lucide?.createIcons();
+};
+
+const openArticleModal = async (articleId: string | null = null, currentUser: string) => {
+    const modal = document.getElementById('magazine-article-modal');
+    const form = document.getElementById('magazine-article-form') as HTMLFormElement;
+    const title = document.getElementById('magazine-article-modal-title');
+    if (!modal || !form || !title) return;
+
+    form.reset();
+    form.removeAttribute('data-editing-id');
+
+    if (articleId) {
+        const articles = await getMagazineArticles();
+        const article = articles.find(a => a.id === articleId && a.author === currentUser);
+        if (article) {
+            title.textContent = 'ویرایش مقاله';
+            form.setAttribute('data-editing-id', articleId);
+            (form.elements.namedItem('title') as HTMLInputElement).value = article.title;
+            (form.elements.namedItem('category') as HTMLInputElement).value = article.category;
+            (form.elements.namedItem('imageUrl') as HTMLInputElement).value = article.imageUrl;
+            (form.elements.namedItem('content') as HTMLTextAreaElement).value = article.content;
+        } else {
+            showToast("شما اجازه ویرایش این مقاله را ندارید.", "error");
+            return;
+        }
+    } else {
+        title.textContent = 'افزودن مقاله جدید';
     }
     openModal(modal);
 };

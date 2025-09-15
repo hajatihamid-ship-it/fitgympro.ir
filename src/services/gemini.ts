@@ -1,8 +1,7 @@
-// FIX: Import Type from "@google/genai" for use in responseSchema.
-import { GoogleGenAI, Type } from "@google/genai";
 import { getGenAI } from '../state';
 import { showToast } from "../utils/dom";
 import { getExercisesDB, getSupplementsDB } from "./storage";
+import { Type } from "@google/genai";
 
 export const generateNutritionPlan = async (userData: any): Promise<any | null> => {
     const ai = getGenAI();
@@ -81,27 +80,32 @@ export const generateNutritionPlan = async (userData: any): Promise<any | null> 
 export const generateWorkoutPlan = async (studentData: any): Promise<any | null> => {
     const ai = getGenAI();
     
-    const { age, gender, trainingGoal, trainingDays } = studentData;
+    const { age, gender, trainingGoal, trainingDays, limitations } = studentData;
     if (!age || !gender || !trainingGoal || !trainingDays) {
         showToast("اطلاعات شاگرد برای تولید برنامه کافی نیست.", "error");
         return null;
     }
 
-    // Create a flat list of available exercises to guide the AI
+    // Create a list of available muscle groups to guide the AI, instead of all exercises, to prevent request size errors.
     const exerciseDB = await getExercisesDB();
-    const availableExercises = Object.values(exerciseDB).flat().join(', ');
+    const availableMuscleGroups = Object.keys(exerciseDB).join(', ');
+    
+    const limitationsInstruction = limitations
+        ? `\nCRITICAL SAFETY INSTRUCTION: The client has the following limitations: "${limitations}". You MUST avoid exercises that could strain these areas. Prioritize safety and suggest safe alternatives.`
+        : '';
 
     const prompt = `
         You are an expert fitness coach. Create a personalized ${trainingDays}-day workout plan for a client with the following details:
         - Age: ${age}
         - Gender: ${gender}
         - Primary Goal: ${trainingGoal}
+        ${limitationsInstruction}
 
         Instructions:
         1. Design a weekly split appropriate for the number of training days. For example, for 4 days, you might use an Upper/Lower split or a Body Part split.
         2. For each training day, provide a clear name in Persian (e.g., "شنبه: سینه و پشت بازو").
         3. For each exercise, provide a reasonable number of sets, reps, and rest period in seconds, tailored to the client's goal.
-        4. ONLY use exercises from this list: ${availableExercises}.
+        4. Choose common, effective, and safe exercises. The available muscle group categories are: ${availableMuscleGroups}. Ensure the exercises you select are well-known and standard gym exercises that would exist in a comprehensive fitness app database.
         5. Provide a final "notes" field in Persian with general advice like warming up and hydration.
     `;
 

@@ -3,7 +3,6 @@ import { renderAuthModal, initAuthListeners } from './ui/authModal';
 import { renderCoachDashboard, initCoachDashboard, updateCoachNotifications } from './ui/coachDashboard';
 import { renderUserDashboard, initUserDashboard, updateUserNotifications } from './ui/userDashboard';
 import { renderAdminDashboard, initAdminDashboard } from './ui/adminDashboard';
-// FIX: Correctly import idbSet, idbGet, and idbDel which are now exported from storage.ts
 import { getUsers, getUserData, saveUsers, saveUserData, addActivityLog, saveDiscounts, getStorePlans, saveStorePlans, seedCMSData, getSiteSettings, idbSet, idbGet, idbDel } from './services/storage';
 import { setCurrentUser, getCurrentUser } from './state';
 import { sanitizeHTML, applySiteSettings } from './utils/dom';
@@ -17,15 +16,16 @@ const seedInitialUsers = async () => {
         console.log("No users found. Seeding initial admin, coach, and user.");
         const initialUsers = [
              { username: "admin10186", email: "admin@fitgympro.com", password: "admin10186", role: "admin", status: "active", coachStatus: null, joinDate: new Date().toISOString() },
-             { username: "coach10186", email: "coach@fitgympro.com", password: "coach10186", role: "coach", status: "active", coachStatus: "verified", joinDate: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString() },
-             { username: "coach_pending", email: "newcoach@fitgympro.com", password: "password123", role: "coach", status: "active", coachStatus: "pending", joinDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString() },
+             { username: "coach10186", email: "coach@fitgympro.com", password: "coach10186", role: "coach", coachTier: "pro", status: "active", coachStatus: "verified", joinDate: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString() },
+             { username: "coach_pending", email: "newcoach@fitgympro.com", password: "password123", role: "coach", coachTier: "standard", status: "active", coachStatus: "pending", joinDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString() },
              { username: "user_active", email: "user@fitgympro.com", password: "password123", role: "user", status: "active", coachStatus: null, joinDate: new Date().toISOString() },
              { username: "user_suspended", email: "suspended@fitgympro.com", password: "password123", role: "user", status: "suspended", coachStatus: null, joinDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString() },
              { username: "user_needs_plan", email: "needsplan@fitgympro.com", password: "password123", role: "user", status: "active", coachStatus: null, joinDate: new Date().toISOString() },
-             { username: "hamid_hajati", email: "hamid.h@fitgympro.com", password: "password123", role: "coach", status: "active", coachStatus: "verified", joinDate: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString() },
-             { username: "morteza_heydari", email: "morteza.h@fitgympro.com", password: "password123", role: "coach", status: "active", coachStatus: "verified", joinDate: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString() },
-             { username: "khorshidi_m", email: "khorshidi.m@fitgympro.com", password: "password123", role: "coach", status: "active", coachStatus: "revoked", joinDate: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString() },
-             { username: "sara_ahmadi", email: "sara.a@fitgympro.com", password: "password123", role: "coach", status: "active", coachStatus: "verified", joinDate: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000).toISOString() }
+             { username: "hamid_hajati", email: "hamid.h@fitgympro.com", password: "password123", role: "coach", coachTier: "standard", status: "active", coachStatus: "verified", joinDate: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString() },
+             { username: "morteza_heydari", email: "morteza.h@fitgympro.com", password: "password123", role: "coach", coachTier: "pro", status: "active", coachStatus: "verified", joinDate: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString() },
+             { username: "khorshidi_m", email: "khorshidi.m@fitgympro.com", password: "password123", role: "coach", coachTier: "standard", status: "active", coachStatus: "revoked", joinDate: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString() },
+             { username: "sara_ahmadi", email: "sara.a@fitgympro.com", password: "password123", role: "coach", coachTier: "standard", headCoach: "headcoach", status: "active", coachStatus: "verified", joinDate: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000).toISOString() },
+             { username: "headcoach", email: "head@fitgympro.com", password: "password123", role: "coach", coachTier: "head_coach", status: "active", coachStatus: "verified", joinDate: new Date(Date.now() - 50 * 24 * 60 * 60 * 1000).toISOString() }
         ];
         await saveUsers(initialUsers);
         
@@ -45,6 +45,17 @@ const seedInitialUsers = async () => {
              }
         });
         
+        await saveUserData("headcoach", {
+             step1: { coachName: "سرمربی", clientName: "سرمربی", gender: "مرد" },
+             students: 12, // Manages a team, but might also have own clients
+             performance: {
+                 rating: 4.9,
+                 nps: 95,
+                 retentionRate: 95,
+                 avgProgramDeliveryHours: 8
+             }
+        });
+
         await saveUserData("coach_pending", {
              step1: { coachName: "Coach Pending", clientName: "Coach Pending" }
         });
@@ -284,9 +295,7 @@ export const renderApp = async () => {
     const currentUser = getCurrentUser();
 
     if (!currentUser) {
-        // FIX: await async function renderLandingPage
         appContainer.innerHTML = await renderLandingPage() + renderAuthModal();
-// FIX: The function initLandingPageListeners expects 0 arguments.
         initLandingPageListeners();
         initAuthListeners(handleLoginSuccess);
     } else {
@@ -300,9 +309,7 @@ export const renderApp = async () => {
         const userData = await getUserData(currentUser);
         const handleGoToHome = async () => {
             if (!appContainer) return;
-            // FIX: await async function renderLandingPage
             appContainer.innerHTML = await renderLandingPage() + renderAuthModal();
-// FIX: The function initLandingPageListeners expects 0 arguments.
             initLandingPageListeners();
             initAuthListeners(handleLoginSuccess);
             window.lucide?.createIcons();
@@ -320,8 +327,9 @@ export const renderApp = async () => {
                 await initAdminDashboard(handleLogout, handleLoginSuccess, handleGoToHome);
                 break;
             case 'coach':
-                appContainer.innerHTML = await renderCoachDashboard(currentUser, userData);
-                await initCoachDashboard(currentUser, handleLogout, handleGoToHome);
+                const coachTier = currentUserData.coachTier || 'standard';
+                appContainer.innerHTML = renderCoachDashboard(currentUser, userData, coachTier);
+                await initCoachDashboard(currentUser, handleLogout, handleGoToHome, coachTier);
                 break;
             case 'user':
                 appContainer.innerHTML = await renderUserDashboard(currentUser, userData);
@@ -502,7 +510,6 @@ const initCommonListeners = () => {
     });
 };
 
-// FIX: Add and export initApp function to be the single entry point.
 export const initApp = async () => {
     const settings = await getSiteSettings();
     applySiteSettings(settings);

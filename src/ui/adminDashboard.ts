@@ -705,6 +705,16 @@ const openEditUserModal = async (username: string) => {
                     <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>ادمین</option>
                 </select>
             </div>
+            <div id="coach-specific-fields" class="${user.role === 'coach' ? '' : 'hidden'}">
+                <div class="mt-4">
+                    <label for="edit-coach-tier" class="block text-sm font-semibold mb-2">سطح مربی</label>
+                    <select id="edit-coach-tier" class="input-field w-full">
+                        <option value="standard" ${user.coachTier === 'standard' ? 'selected' : ''}>استاندارد (Standard)</option>
+                        <option value="pro" ${user.coachTier === 'pro' ? 'selected' : ''}>حرفه‌ای (Pro)</option>
+                        <option value="head_coach" ${user.coachTier === 'head_coach' ? 'selected' : ''}>سرمربی (Head Coach)</option>
+                    </select>
+                </div>
+            </div>
             <div class="pt-2">
                 <button type="submit" class="primary-button w-full">ذخیره تغییرات</button>
             </div>
@@ -712,6 +722,13 @@ const openEditUserModal = async (username: string) => {
     `;
 
     openModal(modal);
+
+    const roleSelect = document.getElementById('edit-user-role');
+    const coachFields = document.getElementById('coach-specific-fields');
+    roleSelect?.addEventListener('change', (e) => {
+        const selectedRole = (e.target as HTMLSelectElement).value;
+        coachFields?.classList.toggle('hidden', selectedRole !== 'coach');
+    });
 };
 
 const renderActivityLogPageHtml = async () => {
@@ -1225,6 +1242,13 @@ export async function initAdminDashboard(
             if (userIndex > -1) {
                 users[userIndex].email = email;
                 users[userIndex].role = role;
+                if(role === 'coach') {
+                    const tier = (form.querySelector('#edit-coach-tier') as HTMLSelectElement).value;
+                    users[userIndex].coachTier = tier;
+                } else {
+                    delete users[userIndex].coachTier;
+                }
+
                 if (!userData.step1) userData.step1 = {};
                 userData.step1.clientName = name;
 
@@ -1248,12 +1272,13 @@ export async function initAdminDashboard(
                 category: formData.get('category') as string,
                 imageUrl: formData.get('imageUrl') as string,
                 content: formData.get('content') as string,
-                publishDate: new Date().toISOString()
+                publishDate: new Date().toISOString(),
+                author: 'admin10186'
             };
             let articles = await getMagazineArticles();
             if (editingId) {
                 const index = articles.findIndex(a => a.id === editingId);
-                if (index > -1) articles[index] = articleData;
+                if (index > -1) articles[index] = { ...articles[index], ...articleData };
             } else {
                 articles.unshift(articleData);
             }
