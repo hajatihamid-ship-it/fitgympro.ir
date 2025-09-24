@@ -175,18 +175,8 @@ export function initAuthListeners(handleLoginSuccess: (username: string) => void
     if (!authModal) return;
 
     const handleLoginActions = async (username: string) => {
-        const calculatorDataApplied = await applyCalculatorData(username);
-        const planAdded = await addSelectedPlanToCart(username);
-        
-        // New logic: Plan has priority for redirection.
-        if (planAdded) {
-            sessionStorage.setItem('fitgympro_redirect_to_tab', 'store-content');
-            sessionStorage.setItem('fitgympro_open_cart', 'true');
-        } else if (calculatorDataApplied) {
-            // If calculator data was applied, redirect to profile to see it
-            sessionStorage.setItem('fitgympro_redirect_to_tab', 'profile-content');
-        }
-        
+        await applyCalculatorData(username);
+        await addSelectedPlanToCart(username);
         handleLoginSuccess(username);
     };
 

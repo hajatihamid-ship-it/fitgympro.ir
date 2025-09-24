@@ -288,72 +288,54 @@ const updateAllNotifications = async () => {
     }
 };
 
-export const renderApp = async () => {
+const renderCorrectDashboard = async () => {
     const appContainer = document.getElementById('app-root');
-    if (!appContainer) return;
-    
-    // Stop any previously running interval.
+    const currentUser = getCurrentUser();
+
+    if (!appContainer || !currentUser) {
+        await renderApp();
+        return;
+    }
+
     if (notificationInterval) {
         clearInterval(notificationInterval);
         notificationInterval = null;
     }
 
-    const lastUser = await idbGet<string>("fitgympro_last_user");
-    setCurrentUser(lastUser || null);
-    const currentUser = getCurrentUser();
+    const users = await getUsers();
+    const currentUserData = users.find((u: any) => u.username === currentUser);
+    if (!currentUserData) {
+        await handleLogout();
+        return;
+    }
 
-    if (!currentUser) {
-        appContainer.innerHTML = await renderLandingPage() + renderAuthModal();
-        initLandingPageListeners();
-        initAuthListeners(handleLoginSuccess);
-    } else {
-        const users = await getUsers();
-        const currentUserData = users.find((u: any) => u.username === currentUser);
-        if (!currentUserData) {
+    const userData = await getUserData(currentUser);
+    const handleGoToHome = async () => {
+        await renderApp();
+    };
+
+    switch (currentUserData.role) {
+        case 'admin':
+            appContainer.innerHTML = await renderAdminDashboard();
+            await initAdminDashboard(handleLogout, handleLoginSuccess, handleGoToHome);
+            break;
+        case 'coach':
+            const coachTier = currentUserData.coachTier || 'standard';
+            appContainer.innerHTML = renderCoachDashboard(currentUser, userData, coachTier);
+            await initCoachDashboard(currentUser, handleLogout, handleGoToHome, coachTier);
+            break;
+        case 'user':
+            appContainer.innerHTML = await renderUserDashboard(currentUser, userData);
+            await initUserDashboard(currentUser, userData, handleLogout, handleGoToHome);
+            break;
+        default:
             await handleLogout();
             return;
-        }
-
-        const userData = await getUserData(currentUser);
-        const handleGoToHome = async () => {
-            if (!appContainer) return;
-            appContainer.innerHTML = await renderLandingPage() + renderAuthModal();
-            initLandingPageListeners();
-            initAuthListeners(handleLoginSuccess);
-            window.lucide?.createIcons();
-            setTimeout(() => {
-                const mainContainer = document.querySelector('.landing-page-wrapper');
-                if (mainContainer) {
-                    mainContainer.classList.add('opacity-100');
-                }
-            }, 50);
-        };
-
-        switch (currentUserData.role) {
-            case 'admin':
-                appContainer.innerHTML = await renderAdminDashboard();
-                await initAdminDashboard(handleLogout, handleLoginSuccess, handleGoToHome);
-                break;
-            case 'coach':
-                const coachTier = currentUserData.coachTier || 'standard';
-                appContainer.innerHTML = renderCoachDashboard(currentUser, userData, coachTier);
-                await initCoachDashboard(currentUser, handleLogout, handleGoToHome, coachTier);
-                break;
-            case 'user':
-                appContainer.innerHTML = await renderUserDashboard(currentUser, userData);
-                await initUserDashboard(currentUser, userData, handleLogout, handleGoToHome);
-                break;
-            default:
-                await handleLogout();
-                return;
-        }
-        
-        await updateAllNotifications();
-        // Start a new interval for live notifications.
-        notificationInterval = window.setInterval(updateAllNotifications, 3000);
     }
     
-    // Handle impersonation banner
+    await updateAllNotifications();
+    notificationInterval = window.setInterval(updateAllNotifications, 3000);
+
     const impersonatingAdmin = sessionStorage.getItem("impersonating_admin");
     if (impersonatingAdmin && currentUser && currentUser !== impersonatingAdmin) {
         const placeholder = document.getElementById('impersonation-banner-placeholder');
@@ -368,11 +350,34 @@ export const renderApp = async () => {
         }
     }
 
-
     window.lucide?.createIcons();
-    
     setTimeout(() => {
-        const mainContainer = document.querySelector('.landing-page-wrapper, #coach-dashboard-container, #user-dashboard-container, .admin-dashboard-container');
+        const mainContainer = document.querySelector('#coach-dashboard-container, #user-dashboard-container, .admin-dashboard-container');
+        if (mainContainer) {
+            mainContainer.classList.add('opacity-100');
+        }
+    }, 50);
+};
+
+export const renderApp = async () => {
+    const appContainer = document.getElementById('app-root');
+    if (!appContainer) return;
+    
+    if (notificationInterval) {
+        clearInterval(notificationInterval);
+        notificationInterval = null;
+    }
+
+    const lastUser = await idbGet<string>("fitgympro_last_user");
+    setCurrentUser(lastUser || null);
+
+    appContainer.innerHTML = await renderLandingPage() + renderAuthModal();
+    initLandingPageListeners(renderCorrectDashboard, handleLogout);
+    initAuthListeners(handleLoginSuccess);
+    
+    window.lucide?.createIcons();
+    setTimeout(() => {
+        const mainContainer = document.querySelector('.landing-page-wrapper, .landing-page-revert');
         if (mainContainer) {
             mainContainer.classList.add('opacity-100');
         }
@@ -386,7 +391,6 @@ export const handleLoginSuccess = async (username: string) => {
 };
 
 export const handleLogout = async () => {
-    // If admin is impersonating, logout should return them to admin panel
     const impersonatingAdmin = sessionStorage.getItem("impersonating_admin");
     if (impersonatingAdmin) {
         sessionStorage.removeItem("impersonating_admin");
@@ -414,7 +418,6 @@ const initTheme = () => {
             
             if (!glider || !lemonBtn || !darkBtn) return;
             
-            // Timeout to allow browser to calculate layout after theme change
             setTimeout(() => {
                 const activeBtn = validTheme === 'dark' ? darkBtn : lemonBtn;
                 const inactiveBtn = validTheme === 'dark' ? lemonBtn : darkBtn;
@@ -489,7 +492,6 @@ const initCommonListeners = () => {
         if (!(e.target instanceof HTMLElement)) return;
         const target = e.target as HTMLElement;
         
-        // Handle password toggle
         const passwordToggle = target.closest('.password-toggle');
         if (passwordToggle) {
             const targetId = passwordToggle.getAttribute('data-target');
@@ -510,7 +512,6 @@ const initCommonListeners = () => {
             return;
         }
 
-        // Handle exit impersonation
         if (target.closest('#exit-impersonation-btn')) {
             await handleLogout();
             return;

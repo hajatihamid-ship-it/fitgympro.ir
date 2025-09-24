@@ -3,6 +3,14 @@ import { getSiteSettings, getUsers, getUserData, getStorePlans, getMagazineArtic
 import { performMetricCalculations, calculateMacros } from '../utils/calculations';
 import { formatPrice, timeAgo } from '../utils/helpers';
 import { switchAuthForm } from './authModal';
+import { getCurrentUser } from '../state';
+
+// Module-level variables to hold references to our event handlers.
+// This allows us to remove the old listener before adding a new one,
+// preventing duplicate listeners from being attached to persistent elements like 'body' or 'window'.
+let landingPageClickHandler: ((e: MouseEvent) => void) | null = null;
+let headerScrollHandler: (() => void) | null = null;
+let userMenuTimeoutId: number | null = null;
 
 const createGauge = (id: string, label: string) => `
     <div class="gauge-container">
@@ -272,6 +280,38 @@ const renderContactContent = (settings: any) => {
 export const renderLandingPage = async () => {
     const settings = await getSiteSettings();
     const { siteName, contactInfo, socialMedia } = settings;
+    const currentUser = getCurrentUser();
+    let authButtonHtml = '';
+
+    if (currentUser) {
+        const userData = await getUserData(currentUser);
+        const name = userData.step1?.clientName || currentUser;
+        authButtonHtml = `
+            <div class="relative">
+                <button id="user-menu-btn" class="landing-auth-btn">
+                    <i data-lucide="user" class="w-4 h-4"></i>
+                    <span class="font-semibold">${name}</span>
+                    <i id="user-menu-chevron" data-lucide="chevron-down" class="w-4 h-4 transition-transform duration-200"></i>
+                </button>
+                <div id="user-menu-dropdown" class="absolute left-0 mt-2 w-48 bg-[#1E293B] border border-[#334155] rounded-md shadow-lg py-1 z-20 opacity-0 pointer-events-none transition-opacity duration-200">
+                    <button id="go-to-dashboard-btn" class="w-full text-right px-4 py-2 text-sm text-slate-300 hover:bg-slate-700 flex items-center gap-2">
+                        <i data-lucide="layout-dashboard" class="w-4 h-4"></i><span>داشبورد من</span>
+                    </button>
+                    <button id="logout-btn-landing" class="w-full text-right px-4 py-2 text-sm text-red-400 hover:bg-slate-700 flex items-center gap-2">
+                        <i data-lucide="log-out" class="w-4 h-4"></i><span>خروج</span>
+                    </button>
+                </div>
+            </div>
+        `;
+    } else {
+        authButtonHtml = `
+            <button id="auth-btn-landing" class="landing-auth-btn">
+                <i data-lucide="log-in" class="w-4 h-4"></i>
+                <span>ورود | ثبت نام</span>
+            </button>
+        `;
+    }
+
 
     return `
     <div class="landing-page-revert">
@@ -286,10 +326,7 @@ export const renderLandingPage = async () => {
                         <button data-modal-target="contact-modal" class="landing-nav-link">تماس با ما</button>
                     </nav>
                     <div class="flex items-center gap-4">
-                        <button id="auth-btn-landing" class="landing-auth-btn">
-                            <i data-lucide="log-in" class="w-4 h-4"></i>
-                            <span>ورود | ثبت نام</span>
-                        </button>
+                        ${authButtonHtml}
                     </div>
                 </div>
             </header>
@@ -426,10 +463,38 @@ const updateCalculatorResults = () => {
     }
 };
 
-let headerScrollListenerAttached = false;
-
-const handleLandingPageClicks = (e: MouseEvent) => {
+const handleLandingPageClicks = (e: MouseEvent, renderDashboard?: () => void, logoutHandler?: () => void) => {
     const target = e.target as HTMLElement;
+
+    const userMenuBtn = target.closest('#user-menu-btn');
+    if (userMenuBtn) {
+        const dropdown = document.getElementById('user-menu-dropdown');
+        const chevron = document.getElementById('user-menu-chevron');
+
+        if (userMenuTimeoutId) {
+            clearTimeout(userMenuTimeoutId);
+            userMenuTimeoutId = null;
+        }
+
+        if (dropdown && chevron) {
+            // If it's already open, clicking again should close it.
+            if (dropdown.classList.contains('opacity-100')) {
+                dropdown.classList.remove('opacity-100', 'pointer-events-auto');
+                chevron.classList.remove('rotate-180');
+            } else {
+                // If it's closed, open it and set the timer.
+                dropdown.classList.add('opacity-100', 'pointer-events-auto');
+                chevron.classList.add('rotate-180');
+
+                userMenuTimeoutId = window.setTimeout(() => {
+                    dropdown.classList.remove('opacity-100', 'pointer-events-auto');
+                    chevron.classList.remove('rotate-180');
+                    userMenuTimeoutId = null;
+                }, 5000);
+            }
+        }
+        return;
+    }
 
     // Modal Triggers
     const modalTrigger = target.closest('[data-modal-target]');
@@ -447,10 +512,19 @@ const handleLandingPageClicks = (e: MouseEvent) => {
         return;
     }
 
-    // Auth Button
     if (target.closest('#auth-btn-landing')) {
         openModal(document.getElementById('auth-modal'));
-        switchAuthForm('login'); // Default to login form for better UX
+        switchAuthForm('login');
+        return;
+    }
+
+    if (target.closest('#go-to-dashboard-btn') && renderDashboard) {
+        renderDashboard();
+        return;
+    }
+
+    if (target.closest('#logout-btn-landing') && logoutHandler) {
+        logoutHandler();
         return;
     }
     
@@ -512,26 +586,30 @@ const updateLandingSliderTrack = (slider: HTMLInputElement) => {
     slider.style.background = `linear-gradient(to right, ${accentColor} ${percentage}%, ${trackColor} ${percentage}%)`;
 };
 
-export const initLandingPageListeners = () => {
+export const initLandingPageListeners = (renderDashboard?: () => void, logoutHandler?: () => void) => {
     const root = document.getElementById('app-root');
     if (!root) return;
     
-    // Header scroll effect - only attach listener once
-    if (!headerScrollListenerAttached) {
-        window.addEventListener('scroll', handleHeaderScroll, { passive: true });
-        headerScrollListenerAttached = true;
+    // --- Robust Click Handler ---
+    // Remove the old listener if it exists to prevent duplicates.
+    if (landingPageClickHandler) {
+        root.removeEventListener('click', landingPageClickHandler);
     }
-    handleHeaderScroll(); // Call once on init to set initial state
+    // Create the new listener with up-to-date function references.
+    landingPageClickHandler = (e: MouseEvent) => handleLandingPageClicks(e, renderDashboard, logoutHandler);
+    root.addEventListener('click', landingPageClickHandler);
 
-    // Attach listener to the root container which gets replaced on navigation.
-    // This avoids attaching multiple listeners to document.body.
-    root.addEventListener('click', handleLandingPageClicks);
+    // --- Robust Scroll Handler ---
+    if (headerScrollHandler) {
+        window.removeEventListener('scroll', headerScrollHandler);
+    }
+    headerScrollHandler = handleHeaderScroll;
+    window.addEventListener('scroll', headerScrollHandler, { passive: true });
+    handleHeaderScroll(); // Call once on init to set the initial state
 
-    // Calculator listeners (this part is safe to re-run as elements are re-created)
     const calculator = document.getElementById('fitness-calculator');
     if (!calculator) return;
     
-    // Sync sliders and number inputs
     const sliderGroups = calculator.querySelectorAll<HTMLElement>('.slider-group');
     sliderGroups.forEach(group => {
         const slider = group.querySelector<HTMLInputElement>('input[type="range"]');
@@ -542,12 +620,10 @@ export const initLandingPageListeners = () => {
                 updateLandingSliderTrack(slider);
                 updateCalculatorResults();
             };
-            // Sync slider to input
             slider.addEventListener('input', () => {
                 numberInput.value = slider.step === '0.5' ? parseFloat(slider.value).toFixed(1) : slider.value;
                 syncAndUpdate();
             });
-            // Sync input to slider
             numberInput.addEventListener('input', () => {
                 let value = parseFloat(numberInput.value);
                 const max = parseFloat(slider.max);
@@ -593,7 +669,6 @@ export const initLandingPageListeners = () => {
         switchAuthForm('signup');
     });
 
-    // Initial calculation and slider track coloring
     calculator.querySelectorAll<HTMLInputElement>('input[type="range"].calculator-slider').forEach(updateLandingSliderTrack);
     updateCalculatorResults();
 };
