@@ -88,6 +88,14 @@ const seedInitialUsers = async () => {
                 hip: 95
             },
             joinDate: new Date().toISOString(),
+            subscriptions: [{
+                planId: 'full-3m',
+                planName: 'پکیج کامل ۳ ماهه',
+                price: 400000,
+                purchaseDate: new Date().toISOString(),
+                fulfilled: true, // Mark as fulfilled so program is visible
+                access: ['workout_plan', 'nutrition_plan', 'chat']
+            }],
             programHistory: [{
                 date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
                 step2: {
