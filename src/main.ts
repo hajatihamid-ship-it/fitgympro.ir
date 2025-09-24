@@ -25,7 +25,8 @@ const seedInitialUsers = async () => {
              { username: "morteza_heydari", email: "morteza.h@fitgympro.com", password: "password123", role: "coach", coachTier: "pro", status: "active", coachStatus: "verified", joinDate: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString() },
              { username: "khorshidi_m", email: "khorshidi.m@fitgympro.com", password: "password123", role: "coach", coachTier: "standard", status: "active", coachStatus: "revoked", joinDate: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString() },
              { username: "sara_ahmadi", email: "sara.a@fitgympro.com", password: "password123", role: "coach", coachTier: "standard", headCoach: "headcoach", status: "active", coachStatus: "verified", joinDate: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000).toISOString() },
-             { username: "headcoach", email: "head@fitgympro.com", password: "password123", role: "coach", coachTier: "head_coach", status: "active", coachStatus: "verified", joinDate: new Date(Date.now() - 50 * 24 * 60 * 60 * 1000).toISOString() }
+             { username: "headcoach", email: "head@fitgympro.com", password: "password123", role: "coach", coachTier: "head_coach", status: "active", coachStatus: "verified", joinDate: new Date(Date.now() - 50 * 24 * 60 * 60 * 1000).toISOString() },
+             { username: "jafar_zahiri", email: "jafar.z@fitgympro.com", password: "password123", role: "coach", coachTier: "pro", status: "active", coachStatus: "verified", joinDate: new Date(Date.now() - 18 * 24 * 60 * 60 * 1000).toISOString() }
         ];
         await saveUsers(initialUsers);
         
@@ -251,6 +252,22 @@ const seedInitialUsers = async () => {
                  nps: 82,
                  retentionRate: 90,
                  avgProgramDeliveryHours: 12
+             }
+        });
+
+        await saveUserData("jafar_zahiri", {
+             step1: { coachName: "جعفر ظهیری", clientName: "جعفر ظهیری", gender: "مرد" },
+             profile: {
+                 avatar: "https://i.pravatar.cc/150?u=jafar_zahiri",
+                 specialization: "بدنسازی، آمادگی جسمانی",
+                 bio: "مربی با تجربه و متخصص در برنامه‌های قدرتی و آمادگی جسمانی."
+             },
+             students: 10,
+             performance: {
+                 rating: 4.6,
+                 nps: 80,
+                 retentionRate: 87,
+                 avgProgramDeliveryHours: 13
              }
         });
 

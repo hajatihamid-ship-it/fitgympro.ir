@@ -148,7 +148,7 @@ const renderCalculator = () => `
 
 const renderCoachesContent = async () => {
     const allUsers = await getUsers();
-    const coachUsernames = ["morteza_heydari", "hamid_hajati", "coach10186"];
+    const coachUsernames = ["jafar_zahiri", "morteza_heydari", "hamid_hajati"];
     const coachPromises = coachUsernames.map(async username => {
         const user = allUsers.find((u: any) => u.username === username);
         if(user && user.coachStatus === 'verified') {
