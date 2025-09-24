@@ -1,8 +1,8 @@
 import { getTemplates, saveTemplate, deleteTemplate, getUsers, getUserData, saveUserData, getNotifications, setNotification, clearNotification, getExercisesDB, getSupplementsDB, getMagazineArticles, saveMagazineArticles } from '../services/storage';
 import { showToast, updateSliderTrack, openModal, closeModal, exportElement, sanitizeHTML, hexToRgba } from '../utils/dom';
-import { getLatestPurchase, timeAgo, getLastActivity } from '../utils/helpers';
+import { getLatestPurchase, timeAgo, getLastActivity, getLastActivityDate } from '../utils/helpers';
 import { generateWorkoutPlan, generateSupplementPlan, generateNutritionPlan, generateFoodReplacements, generateCoachingInsight, generateExerciseSuggestion } from '../services/gemini';
-import { calculateWorkoutStreak, performMetricCalculations, getWeightChange } from '../utils/calculations';
+import { calculateWorkoutStreak, performMetricCalculations, getWeightChange, getWorkoutsThisWeek } from '../utils/calculations';
 import { getGenAI } from '../state';
 
 let currentStep = 1;
@@ -1405,7 +1405,8 @@ const openStudentSelectionModal = async (target: HTMLElement, coachUsername: str
             } else {
                 avatarContainer.innerHTML = '';
                 avatarContainer.textContent = name.substring(0, 1).toUpperCase();
-                avatarContainer.classList.add('bg-accent');
+                avatarContainer.style.backgroundColor = getColorForName(name);
+                avatarContainer.classList.remove('bg-accent');
             }
             
             (button.querySelector('.student-name') as HTMLElement).textContent = name;
@@ -1578,25 +1579,20 @@ const getStudentsNeedingAttention = async (students: any[]) => {
     return (await Promise.all(studentPromises)).filter(s => s !== null) as any[];
 };
 
-const getLastActivityDate = (userData: any): string => {
-    const workoutDates = (userData.workoutHistory || []).map((h: any) => new Date(h.date).getTime());
-    const weightDates = (userData.weightHistory || []).map((h: any) => new Date(h.date).getTime());
-    const allDates = [...workoutDates, ...weightDates];
-    if (allDates.length === 0) {
-        return userData.joinDate || new Date(0).toISOString();
-    }
-    const validDates = allDates.filter(d => d && d > 0);
-    if (validDates.length === 0) {
-        return userData.joinDate || new Date(0).toISOString();
-    }
-    const lastTimestamp = Math.max(...validDates);
-    return new Date(lastTimestamp).toISOString();
-};
 // Helper function to render the coach dashboard tab
 const renderDashboardTab = async (currentUser: string, coachData: any) => {
     const students = await getCoachAllStudents(currentUser);
     const needsPlanStudents = await getStudentsNeedingAttention(students);
     const name = coachData.step1?.clientName || currentUser;
+    const unreadMessagesCount = (await getUsers())
+        .filter(u => u.role === 'user')
+        .map(async u => {
+            const userData = await getUserData(u.username);
+            const lastMessage = (userData.chatHistory || []).slice(-1)[0];
+            return lastMessage && lastMessage.sender === 'user' && !lastMessage.read; // Assume 'read' flag
+        })
+        .filter(Boolean).length;
+
 
     const monthlyRevenue = (students.length * 150000 * 0.7).toLocaleString('fa-IR');
 
@@ -1604,7 +1600,7 @@ const renderDashboardTab = async (currentUser: string, coachData: any) => {
         { title: 'شاگردان فعال', value: students.length, unit: '', icon: 'users', color: 'admin-accent-blue' },
         { title: 'درآمد تخمینی ماهانه', value: monthlyRevenue, unit: 'تومان', icon: 'trending-up', color: 'admin-accent-pink' },
         { title: 'امتیاز شما', value: coachData.performance?.rating?.toFixed(1) || 'N/A', unit: '/ ۵', icon: 'star', color: 'admin-accent-green' },
-        { title: 'شاگردان در انتظار', value: needsPlanStudents.length, unit: '', icon: 'alert-circle', color: 'admin-accent-orange' }
+        { title: 'نرخ نگهداری', value: coachData.performance?.retentionRate || 'N/A', unit: '%', icon: 'award', color: 'admin-accent-orange' }
     ];
 
     const container = document.getElementById('dashboard-content');
@@ -1612,63 +1608,56 @@ const renderDashboardTab = async (currentUser: string, coachData: any) => {
 
     container.innerHTML = `
         <div class="space-y-6 animate-fade-in">
-            <!-- Header and KPIs -->
-            <div class="space-y-2">
-                <h2 class="text-2xl font-bold">خوش آمدید، ${name}!</h2>
-                <p class="text-text-secondary">خلاصه‌ای از فعالیت‌های امروز شما.</p>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                ${kpiCards.map((kpi, index) => `
-                    <div class="stat-card animate-fade-in-up" style="animation-delay: ${index * 100}ms;">
-                        <div class="icon-container" style="--icon-bg: var(--${kpi.color}); background-color: var(--${kpi.color});"><i data-lucide="${kpi.icon}" class="w-6 h-6 text-white"></i></div>
+            <!-- Header and Focus Card -->
+            <div class="today-focus-card text-white">
+                <h2 class="text-2xl font-bold mb-4">تمرکز امروز، ${name}!</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-white/10 p-4 rounded-lg flex items-center gap-4">
+                        <i data-lucide="file-plus-2" class="w-8 h-8 opacity-80 flex-shrink-0"></i>
                         <div>
-                            ${kpi.unit ? `
-                                <div class="flex items-baseline gap-x-1">
-                                    <p class="stat-value">${kpi.value}</p>
-                                    <p class="text-base font-semibold text-text-secondary">${kpi.unit}</p>
-                                </div>
-                            ` : `
-                                <p class="stat-value">${kpi.value}</p>
-                            `}
-                            <p class="stat-label mt-1">${kpi.title}</p>
+                            <p class="text-3xl font-bold">${needsPlanStudents.length}</p>
+                            <p class="text-sm opacity-80">شاگرد منتظر برنامه</p>
                         </div>
                     </div>
-                `).join('')}
+                    <div class="bg-white/10 p-4 rounded-lg flex items-center gap-4">
+                        <i data-lucide="message-square-plus" class="w-8 h-8 opacity-80 flex-shrink-0"></i>
+                        <div>
+                            <p class="text-3xl font-bold">${unreadMessagesCount}</p>
+                            <p class="text-sm opacity-80">پیام جدید</p>
+                        </div>
+                    </div>
+                     <div class="bg-white/10 p-4 rounded-lg flex items-center gap-4">
+                        <i data-lucide="activity" class="w-8 h-8 opacity-80 flex-shrink-0"></i>
+                        <div>
+                            <p class="text-3xl font-bold">۳</p>
+                            <p class="text-sm opacity-80">شاگرد برای پیگیری</p>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Main Grid -->
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <!-- Left Column -->
                 <div class="lg:col-span-2 space-y-6">
-                    <!-- Needs Attention Card -->
-                    <div class="card p-6 animate-fade-in-up" style="animation-delay: 400ms;">
-                        <h3 class="font-bold text-lg mb-4">نیازمند توجه</h3>
-                        <div id="dashboard-needs-attention-list" class="space-y-3">
-                            ${needsPlanStudents.length > 0 ? needsPlanStudents.map(student => {
-                                const studentData = student.userData;
-                                const name = studentData.step1?.clientName || student.username;
-                                const latestPurchase = getLatestPurchase(studentData);
-                                const avatarUrl = studentData.profile?.avatar;
-                                const avatarHtml = avatarUrl
-                                    ? `<img src="${avatarUrl}" alt="${name}" class="w-10 h-10 rounded-full object-cover">`
-                                    : `<div class="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center font-bold text-white" style="background-color: ${getColorForName(name)};">
-                                        ${name.substring(0, 1).toUpperCase()}
-                                       </div>`;
-
-                                return `
-                                    <div class="flex justify-between items-center p-3 bg-bg-tertiary rounded-lg transition-all hover:bg-bg-tertiary/70">
-                                        <div class="flex items-center gap-3">
-                                            ${avatarHtml}
-                                            <div>
-                                                <p class="font-semibold">${name}</p>
-                                                <p class="text-xs text-text-secondary">${latestPurchase?.planName || ''} - ${timeAgo(latestPurchase.purchaseDate)}</p>
-                                            </div>
+                     <!-- KPIs -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        ${kpiCards.map((kpi, index) => `
+                            <div class="stat-card animate-fade-in-up" style="animation-delay: ${index * 100}ms;">
+                                <div class="icon-container" style="--icon-bg: var(--${kpi.color}); background-color: var(--${kpi.color});"><i data-lucide="${kpi.icon}" class="w-6 h-6 text-white"></i></div>
+                                <div>
+                                    ${kpi.unit ? `
+                                        <div class="flex items-baseline gap-x-1">
+                                            <p class="stat-value">${kpi.value}</p>
+                                            <p class="text-base font-semibold text-text-secondary">${kpi.unit}</p>
                                         </div>
-                                        <button class="primary-button !py-1 !px-2 !text-xs" data-action="create-program" data-username="${student.username}">ایجاد برنامه</button>
-                                    </div>
-                                `;
-                            }).join('') : '<p class="text-text-secondary text-center">هیچ شاگردی منتظر برنامه نیست.</p>'}
-                        </div>
+                                    ` : `
+                                        <p class="stat-value">${kpi.value}</p>
+                                    `}
+                                    <p class="stat-label mt-1">${kpi.title}</p>
+                                </div>
+                            </div>
+                        `).join('')}
                     </div>
                     <!-- Growth Chart Card -->
                     <div class="admin-chart-container h-96 animate-fade-in-up" style="animation-delay: 600ms;">
@@ -1688,31 +1677,34 @@ const renderDashboardTab = async (currentUser: string, coachData: any) => {
                         <p id="ai-insight-text" class="text-text-secondary text-sm min-h-[60px]">برای دریافت یک پیشنهاد کاربردی جهت بهبود کسب و کار خود، کلیک کنید.</p>
                         <button id="get-ai-insight-btn" class="secondary-button w-full mt-4 !text-sm">دریافت پیشنهاد</button>
                     </div>
-                    <!-- Performance Snapshot Card -->
-                    <div class="card p-6 animate-fade-in-up" style="animation-delay: 700ms;">
-                        <h3 class="font-bold text-lg mb-4">عملکرد شما</h3>
-                        <div class="space-y-5">
-                            <div class="flex items-center">
-                                <div class="icon-container !w-10 !h-10 !rounded-xl" style="background-color: var(--admin-accent-green);"><i data-lucide="award" class="w-5 h-5 text-white"></i></div>
-                                <div class="flex-grow mr-3">
-                                    <p class="font-semibold text-sm">نرخ نگهداری</p>
-                                    <p class="text-xs text-text-secondary">${coachData.performance?.retentionRate || 0}% مشتریان شما باقی مانده‌اند</p>
-                                </div>
-                            </div>
-                            <div class="flex items-center">
-                                <div class="icon-container !w-10 !h-10 !rounded-xl" style="background-color: var(--admin-accent-yellow);"><i data-lucide="smile" class="w-5 h-5 text-white"></i></div>
-                                <div class="flex-grow mr-3">
-                                    <p class="font-semibold text-sm">شاخص NPS</p>
-                                    <p class="text-xs text-text-secondary">امتیاز ${coachData.performance?.nps || 0} از 100</p>
-                                </div>
-                            </div>
-                            <div class="flex items-center">
-                                <div class="icon-container !w-10 !h-10 !rounded-xl" style="background-color: var(--admin-accent-blue);"><i data-lucide="clock" class="w-5 h-5 text-white"></i></div>
-                                <div class="flex-grow mr-3">
-                                    <p class="font-semibold text-sm">میانگین زمان تحویل برنامه</p>
-                                    <p class="text-xs text-text-secondary">${coachData.performance?.avgProgramDeliveryHours || 0} ساعت</p>
-                                </div>
-                            </div>
+                     <!-- Needs Attention Card -->
+                    <div class="card p-6 animate-fade-in-up" style="animation-delay: 400ms;">
+                        <h3 class="font-bold text-lg mb-4">نیازمند توجه</h3>
+                        <div id="dashboard-needs-attention-list" class="space-y-3">
+                            ${needsPlanStudents.length > 0 ? needsPlanStudents.slice(0, 3).map(student => {
+                                const studentData = student.userData;
+                                const name = studentData.step1?.clientName || student.username;
+                                const latestPurchase = getLatestPurchase(studentData);
+                                const avatarUrl = studentData.profile?.avatar;
+                                const avatarHtml = avatarUrl
+                                    ? `<img src="${avatarUrl}" alt="${name}" class="w-10 h-10 rounded-full object-cover">`
+                                    : `<div class="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center font-bold text-white" style="background-color: ${getColorForName(name)};">
+                                        ${name.substring(0, 1).toUpperCase()}
+                                       </div>`;
+
+                                return `
+                                    <div class="flex justify-between items-center p-2 bg-bg-tertiary rounded-lg transition-all hover:bg-bg-tertiary/70">
+                                        <div class="flex items-center gap-3">
+                                            ${avatarHtml}
+                                            <div>
+                                                <p class="font-semibold text-sm">${name}</p>
+                                                <p class="text-xs text-text-secondary">${latestPurchase?.planName || ''}</p>
+                                            </div>
+                                        </div>
+                                        <button class="primary-button !py-1 !px-2 !text-xs" data-action="create-program" data-username="${student.username}">ایجاد</button>
+                                    </div>
+                                `;
+                            }).join('') : '<p class="text-text-secondary text-center">هیچ شاگردی منتظر برنامه نیست.</p>'}
                         </div>
                     </div>
                 </div>
@@ -1729,6 +1721,14 @@ const renderDashboardTab = async (currentUser: string, coachData: any) => {
         const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
         const blueColor = getComputedStyle(document.documentElement).getPropertyValue('--admin-accent-blue').trim();
 
+        const accentGradient = chartCtx.getContext('2d')!.createLinearGradient(0, 0, 0, 300);
+        accentGradient.addColorStop(0, hexToRgba(accentColor, 0.7));
+        accentGradient.addColorStop(1, hexToRgba(accentColor, 0.1));
+
+        const blueGradient = chartCtx.getContext('2d')!.createLinearGradient(0, 0, 0, 300);
+        blueGradient.addColorStop(0, hexToRgba(blueColor, 0.7));
+        blueGradient.addColorStop(1, hexToRgba(blueColor, 0.1));
+
         new window.Chart(chartCtx, {
             type: 'bar',
             data: {
@@ -1737,7 +1737,7 @@ const renderDashboardTab = async (currentUser: string, coachData: any) => {
                     {
                         label: 'شاگردان جدید',
                         data: [3, 5, 4, 7, 6, 8],
-                        backgroundColor: hexToRgba(blueColor, 0.7),
+                        backgroundColor: blueGradient,
                         borderColor: blueColor,
                         borderWidth: 1,
                         borderRadius: 4
@@ -1745,7 +1745,7 @@ const renderDashboardTab = async (currentUser: string, coachData: any) => {
                     {
                         label: 'کل شاگردان فعال',
                         data: [15, 18, 20, 25, 28, 34],
-                        backgroundColor: hexToRgba(accentColor, 0.7),
+                        backgroundColor: accentGradient,
                         borderColor: accentColor,
                         borderWidth: 1,
                         borderRadius: 4
@@ -1755,6 +1755,7 @@ const renderDashboardTab = async (currentUser: string, coachData: any) => {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
                 scales: {
                     x: {
                          grid: { display: false },
@@ -1762,19 +1763,14 @@ const renderDashboardTab = async (currentUser: string, coachData: any) => {
                     },
                     y: { 
                         beginAtZero: true,
-                        grid: {
-                             color: getComputedStyle(document.documentElement).getPropertyValue('--border-primary').trim()
-                        },
+                        grid: { color: getComputedStyle(document.documentElement).getPropertyValue('--border-primary').trim() },
                         ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-secondary').trim() }
                     }
                 },
                 plugins: {
                     legend: {
-                        display: true,
-                        position: 'bottom',
-                        labels: {
-                             color: getComputedStyle(document.documentElement).getPropertyValue('--text-primary').trim()
-                        }
+                        display: true, position: 'bottom',
+                        labels: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-primary').trim() }
                     }
                 }
             }
@@ -2196,90 +2192,69 @@ const renderStudentCards = async (students: any[], containerId: string) => {
         const studentData = student.isLocal ? student : await getUserData(student.username);
         const name = studentData.step1?.clientName || student.username;
         const goal = studentData.step1?.trainingGoal || 'بدون هدف';
+        const lastActivityDate = getLastActivityDate(studentData);
+        const lastActivity = lastActivityDate ? timeAgo(lastActivityDate.toISOString()) : "بدون فعالیت";
+
+        // Status Logic
+        let statusText = 'غیرفعال';
+        let statusColor = 'bg-red-500';
         const latestPurchase = student.isLocal ? null : getLatestPurchase(studentData);
-        const avatarUrl = studentData.profile?.avatar;
-
-        const streak = calculateWorkoutStreak(studentData.workoutHistory);
-        const weightChange = getWeightChange(studentData);
         const needsPlan = !student.isLocal && latestPurchase && latestPurchase.fulfilled === false;
-        const hasLimitations = !!studentData.step1?.limitations;
-
-        const trendIcon = weightChange.trend === 'up' ? 'trending-up' : 'trending-down';
-        const trendColor = weightChange.trend === 'up' ? 'text-green-500' : 'text-red-500';
-
-        const cardClasses = `student-card card p-6 flex flex-col gap-5 animate-fade-in ${
-            needsPlan ? 'bg-accent/30 border-accent/50 needs-attention-highlight' : 'bg-bg-secondary'
-        }`;
         
-        let purchaseInfoHtml = ``;
-        if (student.isLocal) {
-            purchaseInfoHtml = `
-                <div class="info-card !bg-blue-500/10 !border-dashed p-3 text-center">
-                    <p class="text-sm text-blue-500 font-semibold">شاگرد حضوری</p>
-                </div>`;
-        } else if (latestPurchase) {
-             purchaseInfoHtml = `
-                <div class="info-card p-3 ${needsPlan ? '!bg-accent/10' : ''}">
-                    <div class="flex justify-between items-center">
-                         <div>
-                            <p class="text-xs text-text-secondary">آخرین خرید</p>
-                            <p class="font-bold text-sm">${latestPurchase.planName}</p>
-                            <p class="text-xs text-text-secondary">${new Date(latestPurchase.purchaseDate).toLocaleDateString('fa-IR')}</p>
-                         </div>
-                         ${needsPlan 
-                            ? '<span class="status-badge pending animate-pulse-accent !text-xs !py-0.5 !px-2 flex-shrink-0">در انتظار</span>' 
-                            : '<span class="status-badge verified !text-xs !py-0.5 !px-2 flex-shrink-0">انجام شده</span>'
-                         }
-                    </div>
-                </div>
-            `;
-        } else {
-            purchaseInfoHtml = `
-            <div class="info-card !bg-bg-secondary !border-dashed p-3 text-center">
-                 <p class="text-sm text-text-secondary">خریدی ثبت نشده است.</p>
-            </div>`;
+        if (needsPlan) {
+            statusText = 'در انتظار برنامه';
+            statusColor = 'bg-yellow-500';
+        } else if (lastActivityDate && (Date.now() - lastActivityDate.getTime()) < 7 * 24 * 60 * 60 * 1000) {
+            statusText = 'فعال';
+            statusColor = 'bg-green-500';
         }
+
+        // Adherence Logic
+        const completedWorkouts = getWorkoutsThisWeek(studentData.workoutHistory);
+        const plannedWorkouts = studentData.step1?.trainingDays || 0;
+        const adherencePercentage = plannedWorkouts > 0 ? Math.min(100, Math.round((completedWorkouts / plannedWorkouts) * 100)) : 0;
         
+        const avatarUrl = studentData.profile?.avatar;
         const avatarHtml = avatarUrl
             ? `<img src="${avatarUrl}" alt="${name}" class="w-14 h-14 rounded-full object-cover">`
             : `<div class="w-14 h-14 rounded-full flex-shrink-0 flex items-center justify-center font-bold text-xl text-white" style="background-color: ${getColorForName(name)};">${name.substring(0, 1).toUpperCase()}</div>`;
 
-
         return `
-            <div class="${cardClasses}">
+            <div class="student-card card p-4 flex flex-col gap-4 animate-fade-in ${needsPlan ? 'needs-attention-highlight' : ''}">
                 <!-- Header -->
-                <div class="flex items-start gap-4">
-                    ${avatarHtml}
-                    <div class="flex-grow overflow-hidden">
-                        <h3 class="font-bold text-xl truncate flex items-center gap-2">
-                            ${name}
-                            ${hasLimitations ? `<i data-lucide="shield-alert" class="w-4 h-4 text-orange-500 flex-shrink-0" title="دارای محدودیت"></i>` : ''}
-                        </h3>
-                        <p class="text-sm text-text-secondary truncate">${goal}</p>
+                <div class="flex items-start justify-between">
+                    <div class="flex items-center gap-3 overflow-hidden">
+                        ${avatarHtml}
+                        <div class="overflow-hidden">
+                            <h3 class="font-bold text-lg truncate">${name}</h3>
+                            <p class="text-sm text-text-secondary truncate">${goal}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 text-xs font-semibold flex-shrink-0">
+                        <div class="status-dot ${statusColor}"></div>
+                        <span>${statusText}</span>
                     </div>
                 </div>
-                
-                <!-- KPIs -->
-                <div class="grid grid-cols-3 gap-2 text-center text-sm">
-                    <div>
-                        <p class="font-bold">${streak}</p>
-                        <p class="text-xs text-text-secondary">زنجیره</p>
+
+                <!-- Adherence -->
+                <div>
+                    <div class="flex justify-between items-center text-xs mb-1">
+                        <span class="font-semibold text-text-secondary">پایبندی هفتگی</span>
+                        <span>${completedWorkouts} / ${plannedWorkouts || '?'}</span>
                     </div>
-                    <div>
-                        <p class="font-bold ${trendColor}">${weightChange.change > 0 ? '+' : ''}${weightChange.change} kg</p>
-                        <p class="text-xs text-text-secondary">تغییر وزن</p>
-                    </div>
-                    <div>
-                        <p class="font-bold">${getLastActivity(studentData)}</p>
-                        <p class="text-xs text-text-secondary">فعالیت</p>
+                    <div class="adherence-progress-bar-container">
+                        <div class="adherence-progress-bar-fill" style="width: ${adherencePercentage}%;"></div>
                     </div>
                 </div>
-                
-                <!-- Purchase Info -->
-                ${purchaseInfoHtml}
-                
+
+                <!-- Last Activity -->
+                <div class="text-xs text-text-secondary">
+                    <span>آخرین فعالیت:</span>
+                    <span class="font-semibold">${lastActivity}</span>
+                </div>
+
                 <!-- Actions -->
-                <div class="mt-auto pt-4 border-t border-border-primary flex items-center gap-2">
+                <div class="mt-auto pt-3 border-t border-border-primary flex items-center gap-2">
                     <button class="primary-button !py-1 !px-3 !text-xs flex-1" data-action="view-student-profile" data-username="${student.id}">مشاهده پروفایل</button>
                     ${!student.isLocal ? `<button class="secondary-button !py-1 !px-3 !text-xs" data-action="chat-with-student" data-username="${student.username}"><i data-lucide="message-square" class="w-4 h-4"></i></button>` : ''}
                     ${student.isLocal ? `<button class="secondary-button !py-1 !px-3 !text-xs" data-action="edit-local-student" data-username="${student.id}"><i data-lucide="edit" class="w-4 h-4"></i></button>` : ''}
@@ -3037,11 +3012,12 @@ const renderStudentsTab = async (coachUsername: string) => {
         const allStudents = await getCoachAllStudents(coachUsername);
         const studentDataWithDetailsPromises = allStudents.map(async (s: any) => {
             const userData = s.isLocal ? s : await getUserData(s.username);
+            const lastActivityDate = getLastActivityDate(userData);
             return {
                 ...s,
                 details: userData,
                 name: userData.step1?.clientName || s.username,
-                lastActivityTimestamp: new Date(getLastActivityDate(userData)).getTime()
+                lastActivityTimestamp: lastActivityDate ? lastActivityDate.getTime() : new Date(s.joinDate).getTime()
             };
         });
 

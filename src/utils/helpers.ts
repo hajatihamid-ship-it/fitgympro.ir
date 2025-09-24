@@ -17,6 +17,20 @@ export const timeAgo = (dateString: string): string => {
     return `${days} روز پیش`;
 };
 
+export const getLastActivityDate = (userData: any): Date | null => {
+    const workoutDates = (userData.workoutHistory || []).map((h: any) => new Date(h.date).getTime());
+    const weightDates = (userData.weightHistory || []).map((h: any) => new Date(h.date).getTime());
+    const profileUpdateDate = userData.lastProfileUpdate ? new Date(userData.lastProfileUpdate).getTime() : 0;
+
+    const allDates = [...workoutDates, ...weightDates, profileUpdateDate].filter(d => d > 0);
+    if (allDates.length === 0) {
+        return null;
+    }
+
+    const lastTimestamp = Math.max(...allDates);
+    return new Date(lastTimestamp);
+};
+
 export const getLatestPurchase = (userData: any) => {
     if (!userData.subscriptions || userData.subscriptions.length === 0) {
         return null;
@@ -79,15 +93,9 @@ export const canUserChat = (userData: any): { canChat: boolean; reason: string }
 };
 
 export const getLastActivity = (userData: any): string => {
-    const workoutDates = (userData.workoutHistory || []).map((h: any) => new Date(h.date).getTime());
-    const weightDates = (userData.weightHistory || []).map((h: any) => new Date(h.date).getTime());
-    const profileUpdateDate = userData.lastProfileUpdate ? new Date(userData.lastProfileUpdate).getTime() : 0;
-
-    const allDates = [...workoutDates, ...weightDates, profileUpdateDate];
-    if (allDates.every(d => d === 0)) {
+    const lastDate = getLastActivityDate(userData);
+    if (!lastDate) {
         return "بدون فعالیت";
     }
-
-    const lastTimestamp = Math.max(...allDates);
-    return timeAgo(new Date(lastTimestamp).toISOString());
+    return timeAgo(lastDate.toISOString());
 };
