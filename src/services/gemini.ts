@@ -322,3 +322,60 @@ export const generateExerciseSuggestion = async (muscleGroup: string, trainingGo
         return null;
     }
 };
+
+export const generateUserWorkoutInsight = async (userData: any): Promise<string | null> => {
+    const ai = getGenAI();
+    const { workoutHistory, step1 } = userData;
+
+    if (!workoutHistory || workoutHistory.length < 3) {
+        return "برای ارائه تحلیل دقیق، حداقل به ۳ جلسه تمرین ثبت شده نیاز است. به تمرین ادامه دهید!";
+    }
+
+    // Format the last 10 workouts for the prompt
+    const formattedHistory = workoutHistory.slice(-10).map((log: any) => {
+        const date = new Date(log.date).toLocaleDateString('fa-IR');
+        const exercises = (log.exercises || []).map((ex: any) => {
+            const sets = (ex.sets || []).map((s: any) => `${s.reps}x${s.weight || 'BW'}`).join(', ');
+            return `${ex.name}: ${sets}`;
+        }).join('; ');
+        return `- تاریخ: ${date}, تمرینات: ${exercises}`;
+    }).join('\n');
+
+    const prompt = `
+    شما یک مربی بدنسازی حرفه‌ای و مشوق هستید. اطلاعات کاربر و تاریخچه تمرینات اخیر او در زیر آمده است. این اطلاعات را تحلیل کرده و به زبان فارسی، یک بازخورد سازنده و شخصی‌سازی شده ارائه دهید.
+    
+    **اطلاعات کاربر:**
+    - هدف: ${step1?.trainingGoal || 'نامشخص'}
+    - روزهای تمرین در هفته: ${step1?.trainingDays || 'نامشخص'}
+
+    **تاریخچه تمرینات اخیر (۱۰ جلسه آخر):**
+    ${formattedHistory}
+
+    **وظیفه شما:**
+    1.  **تحلیل کلی**: به صورت کلی عملکرد کاربر را بررسی کنید. آیا ثبات دارد؟ آیا حجم تمرین مناسب به نظر می‌رسد؟
+    2.  **شناسایی نقاط قوت**: یک نکته مثبت در مورد تمرینات او پیدا کنید (مثلا ثبات، افزایش وزنه در یک حرکت خاص، یا تنوع خوب).
+    3.  **ارائه ۲ تا ۳ پیشنهاد عملی**: چند پیشنهاد مشخص برای بهبود ارائه دهید. این پیشنهادات می‌تواند شامل موارد زیر باشد:
+        -   توجه به گروه‌های عضلانی کمتر تمرین داده شده برای ایجاد تعادل.
+        -   پیشنهاد تغییر در تعداد تکرار یا ست برای یک هدف خاص (مثلا افزایش قدرت یا هایپرتروفی).
+        -   یادآوری اهمیت استراحت در صورت مشاهده تمرینات زیاد و پشت سر هم.
+        -   پیشنهاد افزایش تدریجی وزنه (Progressive Overload) اگر وزنه‌ها ثابت به نظر می‌رسند.
+
+    **قالب پاسخ:**
+    -   لحن شما باید مثبت، دوستانه و تشویق کننده باشد.
+    -   پاسخ را با یک عنوان بولد شده مانند **"تحلیل هوشمند تمرینات شما"** شروع کنید.
+    -   از لیست‌های ستاره‌دار (* ) برای خوانایی بهتر پیشنهادات استفاده کنید.
+    -   پاسخ کوتاه و مفید باشد (حدود ۱۵۰ کلمه).
+    `;
+
+    try {
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+        });
+        return response.text;
+    } catch (error) {
+        console.error("AI User Insight Error:", error);
+        showToast("خطا در تولید تحلیل هوشمند", "error");
+        return null;
+    }
+};

@@ -1,7 +1,7 @@
 import { getUserData, saveUserData, addActivityLog, getCart, saveCart, getDiscounts, getNotifications, clearNotification, setNotification, getStorePlans, getUsers } from '../services/storage';
 import { getTodayWorkoutData, calculateBodyMetrics, calculateWorkoutStreak, performMetricCalculations, findBestLifts, calculateWeeklyMetrics, getWorkoutsThisWeek } from '../utils/calculations';
 import { showToast, updateSliderTrack, openModal, closeModal, exportElement, hexToRgba } from '../utils/dom';
-import { generateNutritionPlan } from '../services/gemini';
+import { generateNutritionPlan, generateUserWorkoutInsight } from '../services/gemini';
 import { sanitizeHTML } from '../utils/dom';
 import { formatPrice, timeAgo, getLatestSubscription, getUserAccessPermissions, canUserChat } from '../utils/helpers';
 
@@ -36,6 +36,7 @@ export async function renderUserDashboard(currentUser: string, userData: any) {
 
     const navItems = [
         { target: 'dashboard-content', icon: 'layout-dashboard', label: 'داشبورد', color: 'var(--admin-accent-blue)' },
+        { target: 'ai-insights-content', icon: 'sparkles', label: 'تحلیل هوشمند', color: 'var(--admin-accent-yellow)' },
         { target: 'program-content', icon: 'clipboard-list', label: 'برنامه من', color: 'var(--admin-accent-green)' },
         { target: 'nutrition-content', icon: 'utensils-crossed', label: 'برنامه تغذیه', color: 'var(--admin-accent-orange)' },
         { target: 'chat-content', icon: 'message-square', label: 'گفتگو با مربی', color: 'var(--admin-accent-pink)' },
@@ -82,8 +83,8 @@ export async function renderUserDashboard(currentUser: string, userData: any) {
                         isLocked = true;
                     }
 
-                    // The help section is never locked
-                    if (item.target === 'help-content') {
+                    // The help section and AI insights are never locked
+                    if (item.target === 'help-content' || item.target === 'ai-insights-content') {
                         isLocked = false;
                     }
 
@@ -139,6 +140,7 @@ export async function renderUserDashboard(currentUser: string, userData: any) {
             </header>
 
             <div id="dashboard-content" class="user-tab-content hidden"></div>
+            <div id="ai-insights-content" class="user-tab-content hidden"></div>
             <div id="program-content" class="user-tab-content hidden"></div>
             <div id="nutrition-content" class="user-tab-content hidden"></div>
             <div id="chat-content" class="user-tab-content hidden"></div>
@@ -1151,6 +1153,34 @@ function renderHelpTab() {
     `;
 }
 
+const renderAiInsightsTab = (currentUser: string, userData: any) => {
+    const container = document.getElementById('ai-insights-content');
+    if (!container) return;
+
+    container.innerHTML = `
+        <div class="card p-6 max-w-4xl mx-auto animate-fade-in-up">
+            <div class="flex items-center gap-4 mb-4">
+                <div class="w-16 h-16 bg-accent/10 rounded-full flex items-center justify-center flex-shrink-0">
+                    <i data-lucide="sparkles" class="w-8 h-8 text-accent"></i>
+                </div>
+                <div>
+                    <h2 class="text-2xl font-bold">تحلیل هوشمند تمرینات</h2>
+                    <p class="text-text-secondary">از هوش مصنوعی Gemini برای دریافت بازخورد و پیشنهادات شخصی‌سازی شده بر اساس تاریخچه تمرینات خود استفاده کنید.</p>
+                </div>
+            </div>
+            <button id="generate-ai-insight-btn" class="primary-button w-full mt-4">
+                <i data-lucide="brain-circuit" class="w-5 h-5 ml-2"></i>
+                شروع تحلیل و دریافت پیشنهاد
+            </button>
+            <div id="ai-insight-result" class="mt-6">
+                <!-- Results will be displayed here -->
+            </div>
+        </div>
+    `;
+    window.lucide.createIcons();
+};
+
+
 export async function initUserDashboard(currentUser: string, userData: any, handleLogout: () => void, handleGoToHome: () => void) {
     const mainContainer = document.getElementById('user-dashboard-container');
     if (!mainContainer) return;
@@ -1160,6 +1190,7 @@ export async function initUserDashboard(currentUser: string, userData: any, hand
 
     const pageTitles: Record<string, { title: string, subtitle: string }> = {
         'dashboard-content': { title: 'داشبورد', subtitle: 'خلاصه فعالیت‌ها و پیشرفت شما.' },
+        'ai-insights-content': { title: 'تحلیل هوشمند', subtitle: 'دریافت بازخورد شخصی‌سازی شده از AI.' },
         'program-content': { title: 'برنامه من', subtitle: 'برنامه تمرینی و مکمل‌های شما.' },
         'nutrition-content': { title: 'برنامه تغذیه', subtitle: 'برنامه غذایی اختصاصی شما.' },
         'chat-content': { title: 'گفتگو با مربی', subtitle: 'با مربی خود در ارتباط باشید.' },
@@ -1210,6 +1241,9 @@ export async function initUserDashboard(currentUser: string, userData: any, hand
             case 'dashboard-content':
                 renderDashboardTab(currentUser, freshUserData);
                 break;
+            case 'ai-insights-content':
+                renderAiInsightsTab(currentUser, freshUserData);
+                break;
             case 'program-content':
                 renderUnifiedProgramView(freshUserData);
                 break;
@@ -1240,6 +1274,48 @@ export async function initUserDashboard(currentUser: string, userData: any, hand
         if (navLink) {
             await switchTab(navLink);
             return;
+        }
+
+        if (target.id === 'generate-ai-insight-btn') {
+            const btn = target as HTMLButtonElement;
+            const resultContainer = document.getElementById('ai-insight-result');
+            if (!resultContainer) return;
+
+            btn.classList.add('is-loading');
+            btn.disabled = true;
+            resultContainer.innerHTML = `<div class="text-center p-4"><div class="w-8 h-8 rounded-full animate-spin border-4 border-dashed border-accent border-t-transparent mx-auto"></div><p class="mt-2 text-text-secondary">در حال تحلیل تاریخچه تمرینات شما...</p></div>`;
+
+            try {
+                const freshUserData = await getUserData(currentUser);
+                const insight = await generateUserWorkoutInsight(freshUserData);
+                if (insight) {
+                    let formattedInsight = insight.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                    const listBlockRegex = /(?:\* .+\n?)+/g;
+                    formattedInsight = formattedInsight.replace(listBlockRegex, (block) => {
+                        const items = block.trim().split('\n').map(item => {
+                            const content = item.replace(/^\* /, '').trim();
+                            return `<li class="flex items-start gap-2"><i data-lucide="check-circle" class="w-4 h-4 text-green-500 mt-1 flex-shrink-0"></i><span>${content}</span></li>`;
+                        }).join('');
+                        return `<ul class="space-y-2 mt-2">${items}</ul>`;
+                    });
+                    formattedInsight = formattedInsight.replace(/\n/g, '<br>');
+
+                    resultContainer.innerHTML = `
+                        <div class="info-card !bg-bg-tertiary p-4 animate-fade-in">
+                            ${formattedInsight}
+                        </div>
+                    `;
+                    window.lucide.createIcons();
+                } else {
+                    resultContainer.innerHTML = '<p class="text-red-500 text-center">خطا در دریافت تحلیل. لطفا دوباره تلاش کنید.</p>';
+                }
+            } catch (error) {
+                console.error("AI Insight Error:", error);
+                resultContainer.innerHTML = '<p class="text-red-500 text-center">خطا در ارتباط با سرویس هوش مصنوعی.</p>';
+            } finally {
+                btn.classList.remove('is-loading');
+                btn.disabled = false;
+            }
         }
 
         // Other click handlers
