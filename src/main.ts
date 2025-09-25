@@ -404,7 +404,7 @@ export const renderApp = async () => {
 export const handleLoginSuccess = async (username: string) => {
     setCurrentUser(username);
     await idbSet("fitgympro_last_user", username);
-    await renderApp();
+    await renderCorrectDashboard();
 };
 
 export const handleLogout = async () => {
