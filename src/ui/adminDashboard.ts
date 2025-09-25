@@ -1,3 +1,4 @@
+
 import { getUsers, getDiscounts, getActivityLog, saveUsers, saveUserData, addActivityLog, getUserData, getStorePlans, saveStorePlans, getExercisesDB, saveExercisesDB, getSupplementsDB, saveSupplementsDB, saveDiscounts, getSiteSettings, saveSiteSettings, getMagazineArticles, saveMagazineArticles } from '../services/storage';
 import { formatPrice, timeAgo } from '../utils/helpers';
 import { openModal, closeModal, showToast, applySiteSettings } from '../utils/dom';
@@ -1013,10 +1014,11 @@ export async function initAdminDashboard(
                     </div>
                 `;
                 const users = await getUsers();
+                const pendingCoaches = users.filter((u: any) => u.role === 'coach' && u.coachStatus === 'pending');
                 const statsCards = [
                     { title: 'کل کاربران', value: users.length, icon: 'users', color: 'admin-accent-blue' },
                     { title: 'کل مربیان', value: users.filter((u: any) => u.role === 'coach').length, icon: 'award', color: 'admin-accent-green' },
-                    { title: 'مربیان در انتظار تایید', value: users.filter((u: any) => u.role === 'coach' && u.coachStatus === 'pending').length, icon: 'user-check', color: 'admin-accent-orange' },
+                    { title: 'مربیان در انتظار تایید', value: pendingCoaches.length, icon: 'user-check', color: 'admin-accent-orange' },
                     { title: 'فروش کل (ماه)', value: formatPrice(12500000), icon: 'trending-up', color: 'admin-accent-pink' }
                 ];
                 const statsContainer = pageContainer.querySelector('.grid');
@@ -1028,6 +1030,26 @@ export async function initAdminDashboard(
                         </div>
                     `).join('');
                 }
+                 if (pendingCoaches.length > 0) {
+                    const actionRequiredHtml = `
+                    <div class="mt-6 card p-6 animate-fade-in lg:col-span-5">
+                        <h3 class="font-bold text-lg mb-4 text-orange-500 flex items-center gap-2"><i data-lucide="alert-triangle"></i> نیازمند اقدام فوری</h3>
+                        <div class="space-y-3">
+                            ${pendingCoaches.map(coach => `
+                                <div class="p-3 bg-bg-tertiary rounded-lg flex justify-between items-center">
+                                    <div>
+                                        <p class="font-semibold">${coach.username}</p>
+                                        <p class="text-xs text-text-secondary">${new Date(coach.joinDate).toLocaleDateString('fa-IR')}</p>
+                                    </div>
+                                    <button class="primary-button !py-1 !px-2 !text-xs" data-action="go-to-coaches">مشاهده و بررسی</button>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    `;
+                    pageContainer.querySelector(".lg\\:col-span-5")?.insertAdjacentHTML('afterend', actionRequiredHtml);
+                }
+
                 await initCharts();
                 break;
             }
@@ -1100,6 +1122,9 @@ export async function initAdminDashboard(
             const action = actionBtn.dataset.action;
             const username = actionBtn.dataset.username;
             switch (action) {
+                case 'go-to-coaches':
+                    (mainContainer.querySelector('.nav-link[data-page="coaches"]') as HTMLElement)?.click();
+                    break;
                 case 'impersonate':
                     if (username) {
                         const currentUser = getCurrentUser();
@@ -1115,7 +1140,8 @@ export async function initAdminDashboard(
                             if (action === 'suspend') user.status = 'suspended';
                             if (action === 'activate') user.status = 'active';
                             if (action === 'approve') user.coachStatus = 'verified';
-                            if (action === 'reject' || action === 'revoke') user.coachStatus = 'revoked';
+                            if (action === 'reject') user.coachStatus = 'revoked';
+                            if (action === 'revoke') user.coachStatus = 'revoked';
                             if (action === 'reapprove') user.coachStatus = 'verified';
                             await saveUsers(users);
                             await addActivityLog(`Admin action '${action}' on user ${username}.`);
