@@ -1,0 +1,22 @@
+
+{
+  "short_name": "FitGym Pro",
+  "name": "FitGym Pro - Fitness Dashboard",
+  "description": "A modern, card-based dashboard for coaches and clients to manage and track personalized fitness programs.",
+  "icons": [
+    {
+      "src": "https://assets.website-files.com/63f5b734614a2ce081831035/63f5b734614a2c07a3831065_icon-256w.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "https://assets.website-files.com/63f5b734614a2ce081831035/63f5b734614a2c07a3831065_icon-256w.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/index.html",
+  "display": "standalone",
+  "theme_color": "#121828",
+  "background_color": "#121828"
+}
